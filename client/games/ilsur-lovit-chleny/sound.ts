@@ -103,7 +103,7 @@ export class GameSound {
     if (!this.enabled) return;
     const file = this.effects[reaction];
     const cached = this.samples.get(reaction);
-    if (file && (reaction === "catch" || (cached && cached.readyState >= 3))) {
+    if (file) {
       const sample = cached ?? new Audio(file);
       this.samples.set(reaction, sample);
       sample.currentTime = 0;

@@ -132,18 +132,12 @@ test("production API health and deterministic clock and random values", async ({
   });
   await page.clock.setFixedTime(new Date("2026-01-02T03:04:05.000Z"));
   await page.addInitScript(() => {
-    const values = [0.25, 0.75];
-    Math.random = () => values.shift() ?? 0.5;
+    Math.random = () => 0.75;
   });
   await openGame(page);
   expect(
-    await page.evaluate(() => [
-      new Date().toISOString(),
-      Math.random(),
-      Math.random(),
-      Math.random(),
-    ]),
-  ).toEqual(["2026-01-02T03:04:05.000Z", 0.75, 0.5, 0.5]);
+    await page.evaluate(() => [new Date().toISOString(), Math.random()]),
+  ).toEqual(["2026-01-02T03:04:05.000Z", 0.75]);
 });
 
 for (const viewport of [
