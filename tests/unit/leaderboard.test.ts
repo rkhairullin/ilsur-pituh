@@ -34,6 +34,12 @@ test("limits the ranking, returns a personal place outside the top, and isolates
     expect(board.ranking("other", 5, 22)).toMatchObject({
       top: [{ place: 1, score: 50 }],
     });
+    board.start("arcade", "later", 22, "session");
+    expect(board.latest("arcade", 22)).toEqual({ score: 10, caught: 1 });
+    board.finish("arcade", "later", 22, "session", 0, 0);
+    expect(board.latest("arcade", 22)).toEqual({ score: 0, caught: 0 });
+    expect(board.latest("empty", 22)).toBeUndefined();
+    expect(board.ranking("arcade", 20, 22).personal?.score).toBe(10);
     expect(board.totals("other", 22)).toEqual({
       games: 1,
       score: 50,

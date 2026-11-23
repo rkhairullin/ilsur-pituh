@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="ru">
   <head>
+    <link rel="icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/icons/manifest.webmanifest" />
     <meta charset="UTF-8" />
     <meta
       name="viewport"
@@ -152,7 +155,10 @@
       </section>
       <section class="overlay" id="lost" hidden aria-labelledby="lost-title">
         <h1 id="lost-title" lang="en">Gay over</h1>
-        <p>Итоговый счёт <b id="final-score">0</b></p>
+        <p>
+          Итоговый счёт: <b id="final-score">0</b> · Членов напихано:
+          <b id="final-caught">0</b>
+        </p>
         <p id="result-status" aria-live="polite"></p>
         <button id="retry-result" type="button" hidden>
           Повторить сохранение
@@ -169,11 +175,13 @@
           Игрок:
           <!-- player nickname -->
         </p>
-        <button id="resume" type="button">Продолжить</button>
-        <a class="catalog-return" href="/">В каталог</a>
-        <form method="post" action="/logout">
-          <button type="submit">Выйти</button>
-        </form>
+        <div class="result-actions">
+          <button id="resume" type="button">Продолжить</button>
+          <a class="catalog-return" href="/">В каталог</a>
+          <form method="post" action="/logout">
+            <button type="submit">Выйти</button>
+          </form>
+        </div>
         <p id="fullscreen-hint" hidden>
           Для игры без вкладок в Safari нажмите «Поделиться» → «На экран
           “Домой”», включите «Открывать как веб-приложение» и запустите игру с

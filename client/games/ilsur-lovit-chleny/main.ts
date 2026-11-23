@@ -46,6 +46,7 @@ const misses = document.querySelector<HTMLElement>("#misses")!;
 const score = document.querySelector<HTMLElement>("#score")!;
 const streak = document.querySelector<HTMLElement>("#streak")!;
 const multiplier = document.querySelector<HTMLElement>("#multiplier")!;
+const finalCaught = document.querySelector<HTMLElement>("#final-caught")!;
 const finalScore = document.querySelector<HTMLElement>("#final-score")!;
 const hero = document.querySelector<HTMLImageElement>("#hero-sprite")!;
 const bananaSprite =
@@ -190,6 +191,7 @@ function render() {
   updateText(caught, String(round.caught));
   updateText(score, String(round.score));
   updateText(finalScore, String(round.score));
+  updateText(finalCaught, String(round.caught));
   updateText(streak, String(round.streak));
   updateText(multiplier, `×${round.multiplier}`);
   updateText(misses, `${round.missed} / ${missLimit}`);
@@ -271,13 +273,13 @@ function begin() {
   continuePlay();
 }
 
-function continuePlay() {
+function continuePlay(restoreFocus = false) {
   sound.startMusic();
   sound.activate();
   input.resume(false);
   previousTime = performance.now();
   render();
-  pause.focus();
+  if (restoreFocus) pause.focus();
   scheduleFrame();
 }
 
@@ -341,7 +343,7 @@ function togglePause() {
   if (round.state === "paused") {
     if (document.hidden || portraitPhone.matches) return;
     round.resume();
-    continuePlay();
+    continuePlay(true);
   } else {
     update();
     stop();

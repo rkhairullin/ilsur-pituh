@@ -34,7 +34,7 @@ function escapeHtml(value: string) {
 
 function renderRecords(records: RecordEntry[], withDate = false) {
   if (!records.length) return "<p>Пока нет результатов</p>";
-  return `<ol>${records.map((record) => `<li>${escapeHtml(record.nickname)} · ${record.score} очков · ${record.caught} членов напихано${withDate ? ` · ${new Date(record.finishedAt).toISOString().slice(0, 10)}` : ""}</li>`).join("")}</ol>`;
+  return `<ol>${records.map((record) => `<li>${withDate ? (["🥇 ", "🥈 ", "🥉 "][record.place - 1] ?? "") : ""}${escapeHtml(record.nickname)} · Очков: ${record.score} · Членов напихано: ${record.caught}${withDate ? ` · ${new Date(record.finishedAt).toISOString().slice(0, 10)}` : ""}</li>`).join("")}</ol>`;
 }
 
 export function renderRating(
@@ -42,10 +42,14 @@ export function renderRating(
   records: RecordEntry[],
   personal: RecordEntry | undefined,
   totals: { games: number; score: number; caught: number },
+  latest?: Pick<RecordEntry, "score" | "caught">,
 ) {
   return `<!doctype html>
 <html lang="ru">
 <head>
+<link rel="icon" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="/icons/manifest.webmanifest">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Рейтинг · ${game.title}</title>
@@ -56,11 +60,11 @@ export function renderRating(
 <nav><a class="catalog-button" href="/">Каталог игр</a> <a class="catalog-button" href="${game.href}instructions">Играть</a></nav>
 <h1>Рейтинг · ${game.title}</h1>
 <section><h2>Топ-20</h2>${renderRecords(records, true)}</section>
-<section><h2>Твоё место</h2><p>${personal ? `${personal.place} · ${personal.score} очков · ${personal.caught} членов напихано` : "У тебя пока нет результата"}</p></section>
+<section><h2>Твоё место</h2><p>${personal ? `Место: ${personal.place} · Очков: ${personal.score} · Членов напихано: ${personal.caught}` : "У тебя пока нет результата"}</p>${latest ? `<p>Последняя игра · Очков: ${latest.score} · Членов напихано: ${latest.caught}</p>` : ""}</section>
 <section><h2>За всё время</h2><dl>
-<dt>Сыграно партий</dt><dd>${totals.games}</dd>
-<dt>Очков</dt><dd>${totals.score}</dd>
-<dt>Членов напихано</dt><dd>${totals.caught}</dd>
+<dt>Сыграно партий:</dt><dd>${totals.games}</dd>
+<dt>Очков:</dt><dd>${totals.score}</dd>
+<dt>Членов напихано:</dt><dd>${totals.caught}</dd>
 </dl></section>
 </main>
 </body>
@@ -91,6 +95,9 @@ export function renderCatalog(
   return `<!doctype html>
 <html lang="ru">
   <head>
+<link rel="icon" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="/icons/manifest.webmanifest">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="dark">

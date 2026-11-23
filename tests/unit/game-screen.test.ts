@@ -73,6 +73,7 @@ async function mount(
       "#streak",
       "#multiplier",
       "#final-score",
+      "#final-caught",
       "#result-status",
       "#retry-result",
       "#hero-sprite",
@@ -158,6 +159,7 @@ async function mount(
     matches: options.portrait ?? false,
   });
   const window = new EventTarget();
+  vi.stubGlobal("Audio", class {});
   vi.stubGlobal("document", document);
   vi.stubGlobal("localStorage", {
     getItem: () => "off",
@@ -262,6 +264,7 @@ test("manual pause and automatic pause clear input and restore focus", async () 
   const pause = elements.get("#pause")!;
   const resume = elements.get("#resume")!;
   const overlay = elements.get("#paused")!;
+  expect(pause.focus).not.toHaveBeenCalled();
   fire(window, "keydown", { code: "Escape", repeat: true });
   expect(overlay.hidden).toBe(true);
   fire(pause, "click");

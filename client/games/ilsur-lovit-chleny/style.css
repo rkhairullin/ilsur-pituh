@@ -32,7 +32,7 @@ body {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 12px;
   padding-inline-end: calc(3 * 44px + 3 * 6px);
 }
 .hud div {
@@ -183,7 +183,7 @@ canvas {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
 }
 .result-actions .catalog-return {
   margin-top: 0;
@@ -199,7 +199,7 @@ canvas {
   right: max(10px, env(safe-area-inset-right));
   z-index: 2;
   display: flex;
-  gap: 6px;
+  gap: 12px;
 }
 
 #audio-controls button {
@@ -284,4 +284,8 @@ canvas {
       linear-gradient(90deg, #130a2455, #130a24f7 44%),
       url("/login/login-character-mobile.webp");
   }
+}
+
+#retry-result {
+  margin-bottom: 12px;
 }

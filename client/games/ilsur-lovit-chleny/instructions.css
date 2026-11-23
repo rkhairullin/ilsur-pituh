@@ -95,6 +95,10 @@ kbd {
   inset: 0 auto auto 0;
   object-fit: contain;
 }
+.items .item-facing-up {
+  transform: rotate(180deg);
+}
+
 dt {
   color: #ffc9fc;
   font-weight: 750;

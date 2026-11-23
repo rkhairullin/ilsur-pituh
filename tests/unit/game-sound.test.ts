@@ -183,11 +183,13 @@ test("plays MP3 effects repeatedly and silences them immediately when muted", as
     pause: vi.fn(),
   };
   const missEffect = {
+    readyState: 4,
     currentTime: 1,
     play: vi.fn(async () => {}),
     pause: vi.fn(),
   };
   const goldenEffect = {
+    readyState: 4,
     currentTime: 1,
     play: vi.fn(async () => {}),
     pause: vi.fn(),
@@ -206,6 +208,8 @@ test("plays MP3 effects repeatedly and silences them immediately when muted", as
     miss: "/miss.mp3",
     golden: "/rooster_crowing.mp3",
   });
+  expect(audio.mock.calls).toEqual([["/miss.mp3"], ["/rooster_crowing.mp3"]]);
+  expect(missEffect.play).not.toHaveBeenCalled();
   sound.activate();
   catchEffect.play.mockRejectedValueOnce(new Error("blocked"));
   sound.play("catch");
@@ -214,9 +218,9 @@ test("plays MP3 effects repeatedly and silences them immediately when muted", as
   sound.play("miss");
   sound.play("golden");
   expect(audio.mock.calls).toEqual([
-    ["/catch.mp3"],
     ["/miss.mp3"],
     ["/rooster_crowing.mp3"],
+    ["/catch.mp3"],
   ]);
   expect(goldenEffect.currentTime).toBe(0);
   expect(goldenEffect.play).toHaveBeenCalledTimes(1);
@@ -226,6 +230,10 @@ test("plays MP3 effects repeatedly and silences them immediately when muted", as
   expect(oscillator.start).not.toHaveBeenCalled();
   sound.play("defeat");
   expect(oscillator.start).toHaveBeenCalledTimes(3);
+  missEffect.readyState = 1;
+  sound.play("miss");
+  expect(missEffect.play).toHaveBeenCalledTimes(1);
+  expect(oscillator.start).toHaveBeenCalledTimes(5);
   toggle();
   expect(catchEffect.pause).toHaveBeenCalledTimes(1);
   expect(missEffect.pause).toHaveBeenCalledTimes(1);
