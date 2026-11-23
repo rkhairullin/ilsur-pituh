@@ -306,6 +306,7 @@ test("low FPS, visibility pause, catching, defeat and restart", async ({
   ).toBeVisible();
   await expect(page.locator("#misses")).toHaveText("6 / 6");
   await expect(page.locator("#final-score")).toHaveText("10");
+  await expect(page.locator("#final-caught")).toHaveText("1");
   await page.keyboard.press("q");
   await expect(page.locator("#final-score")).toHaveText("10");
   await expect(page.getByText("Результат сохранён")).toBeVisible();
@@ -571,6 +572,10 @@ for (const capture of [false, true]) {
     await page.addInitScript(() => {
       Math.random = () => 0;
       window.Audio = class extends Audio {
+        override get readyState() {
+          return 4;
+        }
+
         override async play() {
           if (/\/rooster_crowing-[^/]+\.mp3$/.test(this.src))
             document.documentElement.dataset.goldenSound = "played";

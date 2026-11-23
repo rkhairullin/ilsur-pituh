@@ -317,7 +317,7 @@ test("saves a round once, preserves the best result, and persists personal total
     }
     const catalog = await app.inject({ url: "/", headers: { cookie: alice } });
     expect(catalog.body).toContain(
-      "<li>Bob · 40 очков · 3 членов напихано</li><li>&lt;Alice&gt; · 40 очков · 3 членов напихано</li>",
+      "<li>Bob · Очков: 40 · Членов напихано: 3</li><li>&lt;Alice&gt; · Очков: 40 · Членов напихано: 3</li>",
     );
     const restarted = makeApp({ databasePath });
     const page = await restarted.inject({
@@ -326,10 +326,10 @@ test("saves a round once, preserves the best result, and persists personal total
     });
     expect(page.headers["cache-control"]).toBe("no-store");
     expect(page.body).toContain(
-      "<h2>Твоё место</h2><p>2 · 40 очков · 3 членов напихано</p>",
+      "<h2>Твоё место</h2><p>Место: 2 · Очков: 40 · Членов напихано: 3</p>",
     );
     expect(page.body).toMatch(
-      /Сыграно партий<\/dt><dd>3<\/dd>\s*<dt>Очков<\/dt><dd>90<\/dd>\s*<dt>Членов напихано<\/dt><dd>6/,
+      /Сыграно партий:<\/dt><dd>3<\/dd>\s*<dt>Очков:<\/dt><dd>90<\/dd>\s*<dt>Членов напихано:<\/dt><dd>6/,
     );
   } finally {
     await Promise.all(apps.splice(0).map((running) => running.close()));

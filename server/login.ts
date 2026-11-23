@@ -42,6 +42,9 @@ function loginPage(
     .send(`<!doctype html>
 <html lang="ru">
 <head>
+<link rel="icon" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="/icons/manifest.webmanifest">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ильсур - пИтух</title>
@@ -221,6 +224,7 @@ export function registerLogin(app: FastifyInstance, options: LoginOptions) {
             ranking.top,
             ranking.personal,
             leaderboard.totals(entry.id, player.id),
+            leaderboard.latest(entry.id, player.id),
           ),
         );
     });

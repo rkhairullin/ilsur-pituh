@@ -57,11 +57,16 @@ test("a completed round survives a network retry and appears in another browser 
 
     await observer.getByRole("button", { name: "Обновить рейтинг" }).click();
     await expect(
-      observer.getByText("Лидер теста · 10 очков · 1 членов напихано"),
+      observer.getByText("Лидер теста · Очков: 10 · Членов напихано: 1"),
     ).toBeVisible();
     await observer.getByRole("link", { name: "Полный рейтинг" }).click();
     await expect(
-      observer.getByText("1 · 10 очков · 1 членов напихано", { exact: true }),
+      observer.getByText("🥇 Лидер теста · Очков: 10 · Членов напихано: 1"),
+    ).toBeVisible();
+    await expect(
+      observer.getByText("Место: 1 · Очков: 10 · Членов напихано: 1", {
+        exact: true,
+      }),
     ).toBeVisible();
     await expect(observer.locator("dd")).toHaveText(["1", "10", "1"]);
     expect(

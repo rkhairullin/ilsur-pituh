@@ -57,6 +57,11 @@ export function createLeaderboard(database: DatabaseSync) {
     )
     SELECT * FROM ranked WHERE place <= ? OR playerId = ? ORDER BY place
   `);
+  const latest = database.prepare(`
+    SELECT score, caught FROM game_rounds
+    WHERE game = ? AND player_id = ? AND finished_at IS NOT NULL
+    ORDER BY finished_at DESC, id DESC LIMIT 1
+  `);
   const totals = database.prepare(`
     SELECT COUNT(*) AS games, COALESCE(SUM(score), 0) AS score,
       COALESCE(SUM(caught), 0) AS caught
@@ -88,6 +93,10 @@ export function createLeaderboard(database: DatabaseSync) {
         top: rows.slice(0, limit),
         personal: rows.find((row) => row.playerId === player),
       };
+    },
+    latest(game: string, player: number) {
+      return latest.get(game, player) as
+        Pick<RecordEntry, "score" | "caught"> | undefined;
     },
     totals(game: string, player: number) {
       return totals.get(game, player) as {

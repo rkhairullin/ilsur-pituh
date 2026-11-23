@@ -23,7 +23,9 @@ test("starts music with the round, follows the playlist, and obeys mute", async 
     window.Audio = class extends Audio {
       constructor(src?: string) {
         super(src);
-        const effect = src?.match(/\/(catch|miss)-[^/]+\.mp3$/)?.[1];
+        const effect = src?.match(
+          /\/(catch|miss|rooster_crowing)-[^/]+\.mp3$/,
+        )?.[1];
         this.id = `${effect ?? "music"}-probe`;
         document.body.append(this);
       }
@@ -154,7 +156,7 @@ for (const viewport of [
       expect(box.width).toBe(44);
       expect(box.height).toBe(44);
       expect(box.y).toBe(bounds[0]!.y);
-      expect(box.x).toBe(bounds[0]!.x + index * 50);
+      expect(box.x).toBe(bounds[0]!.x + index * 56);
     }
     await pause.click();
     await expect(pause).toBeHidden();

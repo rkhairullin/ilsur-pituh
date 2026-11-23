@@ -33,6 +33,13 @@ export class GameSound {
     } catch {
       // Play remains available when storage is blocked.
     }
+    for (const effect of ["miss", "golden"] as const) {
+      const file = effects[effect];
+      if (!file) continue;
+      const sample = new Audio(file);
+      sample.preload = "auto";
+      this.samples.set(effect, sample);
+    }
     this.render();
     button.addEventListener("click", () => {
       this.enabled = !this.enabled;
@@ -95,8 +102,9 @@ export class GameSound {
   play(reaction: SoundEffect) {
     if (!this.enabled) return;
     const file = this.effects[reaction];
-    if (file) {
-      const sample = this.samples.get(reaction) ?? new Audio(file);
+    const cached = this.samples.get(reaction);
+    if (file && (reaction === "catch" || (cached && cached.readyState >= 3))) {
+      const sample = cached ?? new Audio(file);
       this.samples.set(reaction, sample);
       sample.currentTime = 0;
       void sample.play().catch(() => {
