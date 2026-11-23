@@ -47,7 +47,9 @@ test("awards medals to the first three places and shows the latest game separate
     { score: 10, caught: 1 },
   );
 
-  expect(page).toContain("🥇 Игрок 1");
+  expect(page).toContain(
+    "🥇 Игрок 1 · Очков: 50 · Членов напихано: 5 · Дата: 1970-01-01",
+  );
   expect(page).toContain("🥈 Игрок 2");
   expect(page).toContain("🥉 Игрок 3");
   expect(page).toContain("<li>Игрок 4");

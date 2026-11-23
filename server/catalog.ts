@@ -34,7 +34,7 @@ function escapeHtml(value: string) {
 
 function renderRecords(records: RecordEntry[], withDate = false) {
   if (!records.length) return "<p>Пока нет результатов</p>";
-  return `<ol>${records.map((record) => `<li>${withDate ? (["🥇 ", "🥈 ", "🥉 "][record.place - 1] ?? "") : ""}${escapeHtml(record.nickname)} · Очков: ${record.score} · Членов напихано: ${record.caught}${withDate ? ` · ${new Date(record.finishedAt).toISOString().slice(0, 10)}` : ""}</li>`).join("")}</ol>`;
+  return `<ol>${records.map((record) => `<li>${withDate ? (["🥇 ", "🥈 ", "🥉 "][record.place - 1] ?? "") : ""}${escapeHtml(record.nickname)} · Очков: ${record.score} · Членов напихано: ${record.caught}${withDate ? ` · Дата: ${new Date(record.finishedAt).toISOString().slice(0, 10)}` : ""}</li>`).join("")}</ol>`;
 }
 
 export function renderRating(

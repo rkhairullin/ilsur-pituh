@@ -231,17 +231,20 @@ test("plays MP3 effects repeatedly and silences them immediately when muted", as
   sound.play("defeat");
   expect(oscillator.start).toHaveBeenCalledTimes(3);
   missEffect.readyState = 1;
+  goldenEffect.readyState = 1;
   sound.play("miss");
-  expect(missEffect.play).toHaveBeenCalledTimes(1);
-  expect(oscillator.start).toHaveBeenCalledTimes(5);
+  sound.play("golden");
+  expect(missEffect.play).toHaveBeenCalledTimes(2);
+  expect(goldenEffect.play).toHaveBeenCalledTimes(2);
+  expect(oscillator.start).toHaveBeenCalledTimes(3);
   toggle();
   expect(catchEffect.pause).toHaveBeenCalledTimes(1);
   expect(missEffect.pause).toHaveBeenCalledTimes(1);
   expect(goldenEffect.pause).toHaveBeenCalledTimes(1);
   sound.play("golden");
-  expect(goldenEffect.play).toHaveBeenCalledTimes(1);
+  expect(goldenEffect.play).toHaveBeenCalledTimes(2);
   sound.play("miss");
-  expect(missEffect.play).toHaveBeenCalledTimes(1);
+  expect(missEffect.play).toHaveBeenCalledTimes(2);
 });
 
 test("music preference survives master mute while game effects remain available", () => {
