@@ -6,6 +6,7 @@ import {
   height,
   index,
   requestTurn,
+  stepMsForCircle,
   width,
   type Direction,
 } from "./maze.js";
@@ -13,16 +14,14 @@ import {
 const field = document.querySelector<HTMLElement>("#field")!;
 const score = document.querySelector<HTMLElement>("#score")!;
 const lives = document.querySelector<HTMLElement>("#lives")!;
+const level = document.querySelector<HTMLElement>("#level")!;
+const circle = document.querySelector<HTMLElement>("#circle")!;
+const phase = document.querySelector<HTMLElement>("#phase")!;
 const status = document.querySelector<HTMLElement>("#status")!;
-const landscapeTouch = matchMedia(
-  "(any-pointer: coarse) and (orientation: landscape)",
+const coarseTouch = matchMedia("(any-pointer: coarse)");
+const portraitTouch = matchMedia(
+  "(any-pointer: coarse) and (orientation: portrait)",
 );
-const landscapeDirections: Record<Direction, Direction> = {
-  up: "left",
-  down: "right",
-  left: "down",
-  right: "up",
-};
 const keys: Partial<Record<string, Direction>> = {
   ArrowUp: "up",
   ArrowDown: "down",
@@ -40,42 +39,54 @@ const tiles = Array.from({ length: width * height }, (_, offset) => {
   field.append(tile);
   return {
     tile,
-    wall: cell({ x: offset % width, y: Math.floor(offset / width) }) === "#",
   };
 });
 
 let maze = createMaze();
+let frameTimer: number | null = null;
+
+function scheduleFrame(delay: number) {
+  frameTimer = window.setTimeout(frame, delay);
+}
+
+function startFrames() {
+  if (frameTimer === null) scheduleFrame(stepMsForCircle(maze.circle));
+}
 
 function turnOnScreen(direction: Direction, source: number) {
-  requestTurn(
-    maze,
-    landscapeTouch.matches ? landscapeDirections[direction] : direction,
-    source,
-  );
+  requestTurn(maze, direction, source);
 }
 
 function render() {
   const player = index(maze.player.position);
-  const enemy = index(maze.enemy.position);
-  tiles.forEach(({ tile, wall }, offset) => {
+  tiles.forEach(({ tile }, offset) => {
+    const position = { x: offset % width, y: Math.floor(offset / width) };
+    const wall = cell(position, maze.level) === "#";
+    const portal = cell(position, maze.level) === "T";
+    const enemy = maze.enemies.find(
+      (actor) => index(actor.position) === offset,
+    );
     const appearance = wall
       ? "wall"
       : offset === player
         ? "player"
-        : offset === enemy
-          ? "enemy"
-          : maze.items.has(offset)
-            ? "item"
-            : "empty";
+        : enemy
+          ? `enemy-${enemy.kind}`
+          : offset === maze.golden
+            ? "golden"
+            : portal
+              ? "portal"
+              : maze.items.has(offset)
+                ? "item"
+                : "empty";
     if (tile.dataset.tile !== appearance) tile.dataset.tile = appearance;
   });
   score.textContent = String(maze.score);
   lives.textContent = String(maze.lives);
-  const message = {
-    playing: "",
-    won: "Карта пройдена!",
-    lost: "Ильсур подавился",
-  }[maze.status];
+  level.textContent = String(maze.level);
+  circle.textContent = String(maze.circle);
+  phase.textContent = maze.phase === "chase" ? "Погоня" : "Передышка";
+  const message = maze.notice ?? (maze.status === "lost" ? "Gay over" : "");
   if (status.textContent !== message) status.textContent = message;
 }
 
@@ -83,6 +94,7 @@ document.querySelector("#restart")!.addEventListener("click", () => {
   maze = createMaze();
   render();
   field.focus();
+  startFrames();
 });
 
 document.addEventListener("keydown", (event) => {
@@ -115,8 +127,15 @@ document
   });
 
 render();
-window.setInterval(() => {
+function frame() {
+  frameTimer = null;
   if (maze.status !== "playing") return;
+  if (coarseTouch.matches && !portraitTouch.matches) {
+    scheduleFrame(250);
+    return;
+  }
   advance(maze);
   render();
-}, 280);
+  if (maze.status === "playing") scheduleFrame(stepMsForCircle(maze.circle));
+}
+startFrames();
