@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { index, levelInfo } from "../../client/games/maze/maze.js";
 
 async function openMaze(page: Page) {
   await page.clock.install();
@@ -14,6 +15,13 @@ test("protects the prototype with the shared login", async ({ page }) => {
   await expect(page).toHaveURL(/\/login\?returnTo=%2Fmaze%2F$/);
   await openMaze(page);
   await expect(page.getByRole("heading", { name: "Лабиринт" })).toBeVisible();
+  await expect(page.locator("#level")).toHaveText("1");
+  await expect(page.locator("#circle")).toHaveText("1");
+  await expect(page.locator("#phase")).toHaveText("Погоня");
+  await expect(page.locator("#field [data-tile^='enemy-']")).toHaveCount(1);
+  await expect(
+    page.locator("#field .tile").nth(index(levelInfo(1)!.golden)),
+  ).toHaveAttribute("data-tile", "golden");
 });
 
 test("supports keyboard play, buffered turn, focus and restart", async ({
@@ -25,7 +33,7 @@ test("supports keyboard play, buffered turn, focus and restart", async ({
   await expect(field).toBeFocused();
   await page.keyboard.press("ArrowRight");
   await page.clock.runFor(280);
-  await expect(page.locator("#score")).toHaveText("10");
+  await expect(page.locator("#score")).toHaveText("1");
   await page.keyboard.press("s");
   await page.clock.runFor(840);
   await expect(field.locator(".tile").nth(26)).toHaveAttribute(
@@ -34,7 +42,7 @@ test("supports keyboard play, buffered turn, focus and restart", async ({
   );
   await page.getByRole("button", { name: "Начать заново" }).click();
   await expect(page.locator("#score")).toHaveText("0");
-  await expect(page.locator("#lives")).toHaveText("3");
+  await expect(page.locator("#lives")).toHaveText("5");
 });
 
 test.describe("touch layout", () => {
@@ -78,26 +86,49 @@ test.describe("touch layout", () => {
 
     await page.getByRole("button", { name: "Вправо" }).tap();
     await page.clock.runFor(280);
-    await expect(page.locator("#score")).toHaveText("10");
+    await expect(page.locator("#score")).toHaveText("1");
     await page.setViewportSize({ width: 844, height: 285 });
-    await expect(field).toBeInViewport({ ratio: 1 });
+    await expect(page.locator(".rotate-notice")).toHaveText(
+      "Поверните телефон вертикально, чтобы играть",
+    );
+    await expect(page.locator(".rotate-notice")).toBeVisible();
+    await expect(field).toBeHidden();
+    await page.clock.runFor(1000);
+    await expect(page.locator("#score")).toHaveText("1");
+    await expect(page.locator("#lives")).toHaveText("5");
+    await page.setViewportSize({ width: 375, height: 667 });
+    await expect(field).toBeVisible();
+    await page.getByRole("button", { name: "Начать заново" }).click();
+    await page.getByRole("button", { name: "Вправо" }).tap();
     await page.clock.runFor(280);
-    await expect(page.locator("#score")).toHaveText("20");
-    const rotated = (await field.boundingBox())!;
-    const controls = (await page
-      .getByRole("group", { name: "Управление движением" })
-      .boundingBox())!;
-    expect(rotated.width / rotated.height).toBeCloseTo(15 / 11);
-    expect(controls.x).toBeGreaterThanOrEqual(rotated.x + rotated.width);
-    const [boardColumn, controlsColumn] = await page
-      .locator(".play")
-      .evaluate((play) =>
-        getComputedStyle(play).gridTemplateColumns.split(" ").map(parseFloat),
-      );
-    expect(boardColumn! / (boardColumn! + controlsColumn!)).toBeCloseTo(0.7);
-    await page.getByRole("button", { name: "Вниз" }).tap();
+    await expect(page.locator("#score")).toHaveText("1");
+  });
+
+  test("keeps the score on one line and leaves tunnel cells empty", async ({
+    page,
+  }) => {
+    await openMaze(page);
+    const stats = page.locator(".stats");
+    await expect(
+      page.locator("#field .tile").nth(index(levelInfo(1)!.golden)),
+    ).toHaveAttribute("data-tile", "golden");
+    await expect(stats).toHaveCSS("white-space", "nowrap");
+    const initialHeight = (await stats.boundingBox())!.height;
+    const portal = page.locator("#field [data-tile='portal']").first();
+    await expect(page.locator("#field [data-tile='portal']")).toHaveCount(2);
+    expect(
+      await portal.evaluate(
+        (tile) => getComputedStyle(tile, "::after").borderTopWidth,
+      ),
+    ).toBe("0px");
+    for (const offset of [77, 87, 5, 159])
+      await expect(
+        page.locator("#field .tile").nth(offset),
+      ).not.toHaveAttribute("data-tile", "item");
+    await page.getByRole("button", { name: "Вправо" }).tap();
     await page.clock.runFor(280);
-    await expect(page.locator("#score")).toHaveText("30");
+    await expect(page.locator("#score")).toHaveText("1");
+    expect((await stats.boundingBox())!.height).toBe(initialHeight);
   });
 
   test("renders the portrait prototype @visual", async ({ page }) => {

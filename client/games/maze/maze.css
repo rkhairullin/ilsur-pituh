@@ -53,6 +53,15 @@ button {
   width: min(calc(100vw - 16px), calc((100dvh - 100px) * 11 / 15), 440px);
   grid-template-columns: repeat(11, minmax(0, 1fr));
 }
+.stats {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+#score {
+  display: inline-block;
+  min-width: 7ch;
+  text-align: right;
+}
 .tile {
   display: grid;
   place-items: center;
@@ -76,11 +85,23 @@ button {
   aspect-ratio: 1;
   background: #f4db68;
 }
-.tile[data-tile="enemy"]::after {
+.tile[data-tile^="enemy-"]::after {
   width: 72%;
   aspect-ratio: 1;
   background: #ff7789;
   border-radius: 10%;
+}
+.tile[data-tile="enemy-interceptor"]::after {
+  background: #bb91ff;
+}
+.tile[data-tile="enemy-patroller"]::after {
+  background: #62e2cc;
+}
+.tile[data-tile="golden"]::after {
+  width: 48%;
+  aspect-ratio: 1;
+  background: #ffd85a;
+  box-shadow: 0 0 8px #ffd85a;
 }
 #restart {
   padding: 0;
@@ -93,6 +114,9 @@ button {
 .controls {
   display: none;
 }
+.rotate-notice {
+  display: none;
+}
 @media (any-pointer: coarse) {
   main {
     height: 100dvh;
@@ -103,6 +127,10 @@ button {
     flex-wrap: wrap;
     gap: 0 8px;
     font-size: 0.875rem;
+  }
+  .stats {
+    flex: 0 0 100%;
+    text-align: center;
   }
   #restart {
     min-height: 28px;
@@ -152,6 +180,9 @@ button {
   }
 }
 @media (any-pointer: coarse) and (orientation: portrait) {
+  .stats {
+    font-size: clamp(0.625rem, 3vw, 0.875rem);
+  }
   .play {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 7fr) minmax(148px, 3fr);
@@ -161,19 +192,18 @@ button {
   }
 }
 @media (any-pointer: coarse) and (orientation: landscape) {
-  .play {
-    grid-template-columns: minmax(0, 7fr) minmax(212px, 3fr);
-    grid-template-rows: minmax(0, 1fr);
+  main > :not(.rotate-notice) {
+    display: none !important;
   }
-  .board-area {
-    /* Center the unrotated box even when it is taller than this row. */
-    position: relative;
-  }
-  #field {
-    width: min(100cqh, calc(100cqw * 11 / 15), 425px);
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(90deg);
+  .rotate-notice {
+    position: fixed;
+    z-index: 10;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: #14181d;
+    text-align: center;
+    font-size: 1.25rem;
   }
 }
