@@ -369,3 +369,29 @@ test("requires login for instructions and returns to them after login", async ()
   expect(instructions.body).toContain('href="/ilsur-lovit-chleny/"');
   expect(instructions.body).toContain("У Ильсура есть право сказать «нет».");
 });
+
+test("opens the maze after shared login and keeps its template private", async () => {
+  const app = makeApp();
+  expect((await app.inject("/maze/")).headers.location).toBe(
+    "/login?returnTo=%2Fmaze%2F",
+  );
+  expect((await app.inject("/games/maze/index.html")).statusCode).toBe(404);
+  const login = await app.inject({
+    method: "POST",
+    url: "/login",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    payload: new URLSearchParams({
+      nickname: "Игрок",
+      password: options.password,
+      returnTo: "/maze/",
+    }).toString(),
+  });
+  expect(login.headers.location).toBe("/maze/");
+  const cookie = login.cookies[0]!;
+  const maze = await app.inject({
+    url: "/maze/",
+    headers: { cookie: `${cookie.name}=${cookie.value}` },
+  });
+  expect(maze.statusCode).toBe(200);
+  expect(maze.body).toContain("<h1>Лабиринт</h1>");
+});

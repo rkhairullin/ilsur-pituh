@@ -28,8 +28,12 @@ const digest = (value: string) => createHash("sha256").update(value).digest();
 const gamePath = "/ilsur-lovit-chleny/";
 const instructionsPath = `${gamePath}instructions`;
 
+const mazePath = "/maze/";
+
 function safeReturnTo(value: unknown) {
-  return value === gamePath || value === instructionsPath ? value : "/";
+  return value === gamePath || value === instructionsPath || value === mazePath
+    ? value
+    : "/";
 }
 
 function loginPage(
@@ -194,6 +198,16 @@ export function registerLogin(app: FastifyInstance, options: LoginOptions) {
   app.get("/", catalog);
   app.get("/index.html", catalog);
   app.get(gamePath, game);
+  app.get(mazePath, async (request, reply) => {
+    if (!findSession.get(sessionHash(request), Date.now())) {
+      return reply.redirect(`/login?returnTo=${encodeURIComponent(mazePath)}`);
+    }
+    const template = await readFile(
+      new URL("../client/games/maze/index.html", import.meta.url),
+      "utf8",
+    );
+    return reply.type("text/html; charset=utf-8").send(template);
+  });
   app.get(instructionsPath, async (request, reply) => {
     if (!findSession.get(sessionHash(request), Date.now())) {
       return reply.redirect(
