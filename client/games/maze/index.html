@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Лабиринт</title>
+    <link rel="stylesheet" href="./maze.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Лабиринт</h1>
+        <p>
+          Членов: <span id="score">0</span> · Жизни: <span id="lives">3</span>
+        </p>
+        <a href="/">Каталог</a>
+        <button type="button" id="restart">Начать заново</button>
+      </header>
+      <section class="play" aria-label="Лабиринт">
+        <div class="board-area">
+          <div
+            id="field"
+            tabindex="0"
+            aria-label="Игровое поле. Стрелки или WASD для движения"
+          ></div>
+        </div>
+        <div class="controls" role="group" aria-label="Управление движением">
+          <button type="button" data-direction="up" aria-label="Вверх">
+            ↑
+          </button>
+          <button type="button" data-direction="left" aria-label="Влево">
+            ←
+          </button>
+          <button type="button" data-direction="right" aria-label="Вправо">
+            →
+          </button>
+          <button type="button" data-direction="down" aria-label="Вниз">
+            ↓
+          </button>
+        </div>
+      </section>
+      <footer>
+        <span id="status" role="status"></span>
+      </footer>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
