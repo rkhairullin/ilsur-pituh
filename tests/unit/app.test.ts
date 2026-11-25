@@ -22,7 +22,7 @@ test("serves health, page and stylesheet; rejects missing routes", async () => {
   expect(page.statusCode).toBe(200);
   expect(page.headers["content-type"]).toContain("text/html");
   expect(page.body).toContain("Ильсур - пИтух");
-  expect(page.body).toContain("<button>Начать петушить</button>");
+  expect(page.body).toContain("<button>В пИтушарню</button>");
   expect(page.body).toContain("Имя свое скажи, если ты мущщщщина");
   expect(page.body).toContain("Пароль (знают все четкие пацаны)");
   const characterPath = "/login/login-character.webp";

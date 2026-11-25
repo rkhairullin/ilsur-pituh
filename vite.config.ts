@@ -10,7 +10,8 @@ export default defineConfig({
       input: [
         "ilsur-lovit-chleny/index.html",
         "ilsur-lovit-chleny/instructions.html",
-        "maze/index.html",
+        "packman/index.html",
+        "packman/instructions.html",
       ].map((page) =>
         fileURLToPath(new URL(`./client/games/${page}`, import.meta.url)),
       ),

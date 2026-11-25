@@ -28,10 +28,14 @@ const digest = (value: string) => createHash("sha256").update(value).digest();
 const gamePath = "/ilsur-lovit-chleny/";
 const instructionsPath = `${gamePath}instructions`;
 
-const mazePath = "/maze/";
+const packmanPath = "/packman/";
+const packmanInstructionsPath = `${packmanPath}instructions`;
 
 function safeReturnTo(value: unknown) {
-  return value === gamePath || value === instructionsPath || value === mazePath
+  return value === gamePath ||
+    value === instructionsPath ||
+    value === packmanPath ||
+    value === packmanInstructionsPath
     ? value
     : "/";
 }
@@ -68,7 +72,7 @@ ${message ? `<p role="alert">${message}</p>` : ""}
 <input type="hidden" name="returnTo" value="${returnTo}">
 <label>Имя свое скажи, если ты мущщщщина <input name="nickname" autocomplete="username" required maxlength="32"></label>
 <label>Пароль (знают все четкие пацаны) <input name="password" type="password" autocomplete="current-password" required maxlength="128"></label>
-<button>Начать петушить</button>
+<button>В пИтушарню</button>
 </form>
 </div>
 </div>
@@ -148,6 +152,8 @@ export function registerLogin(app: FastifyInstance, options: LoginOptions) {
       path === "/index.html" ||
       path === gamePath ||
       path === instructionsPath ||
+      path === packmanPath ||
+      path === packmanInstructionsPath ||
       api
     ) {
       reply.header("Cache-Control", "no-store");
@@ -198,12 +204,26 @@ export function registerLogin(app: FastifyInstance, options: LoginOptions) {
   app.get("/", catalog);
   app.get("/index.html", catalog);
   app.get(gamePath, game);
-  app.get(mazePath, async (request, reply) => {
+  app.get(packmanPath, async (request, reply) => {
     if (!findSession.get(sessionHash(request), Date.now())) {
-      return reply.redirect(`/login?returnTo=${encodeURIComponent(mazePath)}`);
+      return reply.redirect(
+        `/login?returnTo=${encodeURIComponent(packmanPath)}`,
+      );
     }
     const template = await readFile(
-      new URL("../client/games/maze/index.html", import.meta.url),
+      new URL("../client/games/packman/index.html", import.meta.url),
+      "utf8",
+    );
+    return reply.type("text/html; charset=utf-8").send(template);
+  });
+  app.get(packmanInstructionsPath, async (request, reply) => {
+    if (!findSession.get(sessionHash(request), Date.now())) {
+      return reply.redirect(
+        `/login?returnTo=${encodeURIComponent(packmanInstructionsPath)}`,
+      );
+    }
+    const template = await readFile(
+      new URL("../client/games/packman/instructions.html", import.meta.url),
       "utf8",
     );
     return reply.type("text/html; charset=utf-8").send(template);

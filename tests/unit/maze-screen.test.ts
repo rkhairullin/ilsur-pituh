@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import * as engine from "../../client/games/maze/maze.js";
+import * as engine from "../../client/games/packman/maze.js";
 
 class Element extends EventTarget {
   children: Element[] = [];
@@ -27,7 +27,7 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
-  vi.doUnmock("../../client/games/maze/maze.js");
+  vi.doUnmock("../../client/games/packman/maze.js");
   vi.resetModules();
 });
 
@@ -68,7 +68,7 @@ test("renders play, pointer input and a fresh round", async () => {
   );
   vi.stubGlobal("HTMLButtonElement", Button);
   vi.stubGlobal("HTMLAnchorElement", Anchor);
-  await import("../../client/games/maze/main.js");
+  await import("../../client/games/packman/main.js");
 
   const player = () =>
     field.children.findIndex(({ dataset }) => dataset.tile === "player");
@@ -194,13 +194,13 @@ test("restart after defeat starts a fresh game loop", async () => {
     .fn()
     .mockReturnValueOnce(lostMaze)
     .mockReturnValue(freshMaze);
-  vi.doMock("../../client/games/maze/maze.js", async () => ({
+  vi.doMock("../../client/games/packman/maze.js", async () => ({
     ...(await vi.importActual<typeof engine>(
-      "../../client/games/maze/maze.js",
+      "../../client/games/packman/maze.js",
     )),
     createMaze,
   }));
-  await import("../../client/games/maze/main.js");
+  await import("../../client/games/packman/main.js");
   expect(status.textContent).toBe("Gay over");
   vi.advanceTimersByTime(280);
   expect(vi.getTimerCount()).toBe(0);
@@ -279,13 +279,13 @@ test("renders four distinct enemy heads on the final map", async () => {
   vi.stubGlobal("matchMedia", () => ({ matches: false }));
   vi.stubGlobal("HTMLButtonElement", Button);
   vi.stubGlobal("HTMLAnchorElement", Anchor);
-  vi.doMock("../../client/games/maze/maze.js", async () => ({
+  vi.doMock("../../client/games/packman/maze.js", async () => ({
     ...(await vi.importActual<typeof engine>(
-      "../../client/games/maze/maze.js",
+      "../../client/games/packman/maze.js",
     )),
     createMaze: () => maze,
   }));
-  await import("../../client/games/maze/main.js");
+  await import("../../client/games/packman/main.js");
 
   const enemies = field.children.filter(({ dataset }) =>
     dataset.tile?.startsWith("enemy-"),

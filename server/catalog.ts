@@ -19,6 +19,15 @@ export const games: GameCard[] = [
       "Диско-пушки палят членами, а у Ильсура опять руки заняты. Помоги ему поймать их ртом, держи темп и докажи, что у Ильсура глубокая глотка",
     id: "ilsur-lovit-chleny",
   },
+  {
+    title: "Ильсур-Пакман-Членоед",
+    href: "/packman/",
+    image: "/catalog/packman-preview.webp",
+    imageAlt: "Ильсур и радужные петухи в лабиринте",
+    description:
+      "Ильсур мчит по радужному лабиринту, собирает члены и ускользает от четырёх очень разных поклонников",
+    id: "ilsur-pacman",
+  },
 ];
 
 function escapeHtml(value: string) {
@@ -86,7 +95,7 @@ export function renderCatalog(
     <h2>${game.title}</h2>
     <p class="game-card__description">${game.description}</p>
     <div class="game-card__rating"><h3>Топ-5</h3>${renderRecords(top(game.id))}<a href="${game.href}rating">Полный рейтинг</a></div>
-    <a class="catalog-button" href="${game.href}instructions">Начать петушить</a>
+    <a class="catalog-button" href="${game.href}instructions">К игре</a>
   </div>
 </article>`,
     )
@@ -125,7 +134,7 @@ export function renderCatalog(
             <p class="catalog-kicker">ВЫБИРАЙ И ЗАЛЕТАЙ</p>
             <h2 id="library-title">Игры, где можно отпетушить Ильсура</h2>
           </div>
-          <p class="library-count">01 <span>ИГРА</span></p>
+          <p class="library-count">${String(games.length).padStart(2, "0")} <span>ИГРЫ</span></p>
         </div>
         <div class="game-grid">${cards}</div>
       </section>

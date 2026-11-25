@@ -27,7 +27,7 @@ for (const viewport of [
     const nickname = `<Лиса> ${test.info().project.name}-${viewport.width}`;
     await page.getByLabel("Имя свое скажи, если ты мущщщщина").fill(nickname);
     await page.getByLabel("Пароль (знают все четкие пацаны)").fill("wrong");
-    await page.getByRole("button", { name: "Начать петушить" }).click();
+    await page.getByRole("button", { name: "В пИтушарню" }).click();
     await expect(page.getByRole("alert")).toHaveText(
       "Неверный пароль, натурал чертов",
     );
@@ -46,8 +46,8 @@ for (const viewport of [
     await expect(page.locator("#player-nickname")).toHaveText(
       `Привет, ${nickname}`,
     );
-    await page.getByRole("link", { name: "Начать петушить" }).click();
-    await page.getByRole("link", { name: "Начать напихивать" }).click();
+    await page.getByRole("link", { name: "К игре" }).first().click();
+    await page.getByRole("link", { name: "Начать пИтушить" }).click();
     await expect(page).toHaveURL(/\/ilsur-lovit-chleny\/$/);
     const sprite = page.locator("#hero-sprite");
     await expect(sprite).toHaveJSProperty("currentSrc", characterUrl);
@@ -75,7 +75,7 @@ for (const viewport of [
     await page
       .getByLabel("Пароль (знают все четкие пацаны)")
       .fill("browser-test-password");
-    await page.getByRole("button", { name: "Начать петушить" }).click();
+    await page.getByRole("button", { name: "В пИтушарню" }).click();
     await expect(
       page.getByRole("heading", {
         name: "Игры, где можно отпетушить Ильсура",
@@ -99,7 +99,7 @@ test("direct game visit without a session asks for login then returns to the gam
   await page
     .getByLabel("Пароль (знают все четкие пацаны)")
     .fill("browser-test-password");
-  await page.getByRole("button", { name: "Начать петушить" }).click();
+  await page.getByRole("button", { name: "В пИтушарню" }).click();
   await expect(page).toHaveURL(/\/ilsur-lovit-chleny\/$/);
   await expect(page.getByRole("button", { name: "Пауза" })).toBeVisible();
   expect(await (await page.request.get("/api/session")).json()).toMatchObject({
@@ -127,8 +127,10 @@ for (const viewport of [
     );
 
     await expect(
-      page.getByRole("button", { name: "Начать петушить" }),
-    ).toBeInViewport({ ratio: 1 });
+      page.getByRole("button", { name: "В пИтушарню" }),
+    ).toBeInViewport({
+      ratio: 1,
+    });
     await expect(page).toHaveScreenshot(
       `login-${viewport.width}x${viewport.height}.png`,
     );

@@ -370,12 +370,17 @@ test("requires login for instructions and returns to them after login", async ()
   expect(instructions.body).toContain("У Ильсура есть право сказать «нет».");
 });
 
-test("opens the maze after shared login and keeps its template private", async () => {
+test("opens Packman and its instructions after shared login", async () => {
   const app = makeApp();
-  expect((await app.inject("/maze/")).headers.location).toBe(
-    "/login?returnTo=%2Fmaze%2F",
+  expect((await app.inject("/packman/")).headers.location).toBe(
+    "/login?returnTo=%2Fpackman%2F",
   );
-  expect((await app.inject("/games/maze/index.html")).statusCode).toBe(404);
+  const instructionPath = "/packman/instructions";
+  expect((await app.inject(instructionPath)).headers.location).toBe(
+    `/login?returnTo=${encodeURIComponent(instructionPath)}`,
+  );
+  expect((await app.inject("/games/packman/index.html")).statusCode).toBe(404);
+  expect((await app.inject("/maze/")).statusCode).toBe(404);
   const login = await app.inject({
     method: "POST",
     url: "/login",
@@ -383,15 +388,33 @@ test("opens the maze after shared login and keeps its template private", async (
     payload: new URLSearchParams({
       nickname: "Игрок",
       password: options.password,
-      returnTo: "/maze/",
+      returnTo: instructionPath,
     }).toString(),
   });
-  expect(login.headers.location).toBe("/maze/");
+  expect(login.headers.location).toBe(instructionPath);
   const cookie = login.cookies[0]!;
   const maze = await app.inject({
-    url: "/maze/",
+    url: "/packman/",
     headers: { cookie: `${cookie.name}=${cookie.value}` },
   });
   expect(maze.statusCode).toBe(200);
   expect(maze.body).toContain("<h1>Ильсур-Пакман-Членоед</h1>");
+  const instructions = await app.inject({
+    url: instructionPath,
+    headers: { cookie: `${cookie.name}=${cookie.value}` },
+  });
+  expect(instructions.statusCode).toBe(200);
+  expect(instructions.body).toContain('href="/packman/">Начать пИтушить</a>');
+  expect(instructions.body).toContain("Дилдо");
+  const directLogin = await app.inject({
+    method: "POST",
+    url: "/login",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    payload: new URLSearchParams({
+      nickname: "Игрок",
+      password: options.password,
+      returnTo: "/packman/",
+    }).toString(),
+  });
+  expect(directLogin.headers.location).toBe("/packman/");
 });
