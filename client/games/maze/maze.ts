@@ -10,7 +10,7 @@ export const directions = {
 } as const;
 export type Direction = keyof typeof directions;
 export type Position = { x: number; y: number };
-export type EnemyKind = "pursuer" | "interceptor" | "patroller";
+export type EnemyKind = "pursuer" | "interceptor" | "patroller" | "ambusher";
 export type Actor = { position: Position; direction: Direction };
 export type Enemy = Actor & { kind: EnemyKind };
 export type Level = {
@@ -201,12 +201,14 @@ type Maze = {
   status: "playing" | "lost";
   notice: "Карта пройдена!" | "Круг пройден!" | null;
   phase: "chase" | "rest";
+  started: boolean;
   paused: boolean;
   tick: number;
   level: number;
   circle: number;
   goldenTicksLeft: number;
   goldenMovesTaken: number;
+  goldenFruitProgress: number;
   graceTicksLeft: number;
 };
 
@@ -214,7 +216,7 @@ const enemySpawns: readonly Enemy[] = [
   { position: { x: 9, y: 7 }, direction: "left", kind: "pursuer" },
   { position: { x: 9, y: 5 }, direction: "down", kind: "patroller" },
   { position: { x: 7, y: 9 }, direction: "left", kind: "interceptor" },
-  { position: { x: 7, y: 5 }, direction: "down", kind: "interceptor" },
+  { position: { x: 7, y: 5 }, direction: "down", kind: "ambusher" },
 ];
 const opposites: Record<Direction, Direction> = {
   up: "down",
@@ -263,7 +265,7 @@ function actorsForLevel(level: number): Enemy[] {
 
 export function createMaze(): Maze {
   return {
-    player: { position: { x: 1, y: 1 }, direction: "up" },
+    player: { position: { x: 1, y: 1 }, direction: "right" },
     enemies: actorsForLevel(1),
     pending: null,
     items: itemsForLevel(1),
@@ -273,12 +275,14 @@ export function createMaze(): Maze {
     status: "playing",
     notice: null,
     phase: "chase",
+    started: false,
     paused: false,
     tick: 0,
     level: 1,
     circle: 1,
     goldenTicksLeft: 0,
     goldenMovesTaken: 0,
+    goldenFruitProgress: 0,
     graceTicksLeft: 0,
   };
 }
@@ -287,40 +291,40 @@ export function destination(
   position: Position,
   direction: Direction,
   level = 1,
-  playerCanUseTunnels = true,
+  canUseTunnels = true,
 ) {
   const [dx, dy] = directions[direction];
   const next = { x: position.x + dx, y: position.y + dy };
   if (
-    playerCanUseTunnels &&
+    canUseTunnels &&
     position.y === tunnelRow &&
     direction === "left" &&
     position.x === 0
   )
     next.x = width - 1;
   else if (
-    playerCanUseTunnels &&
+    canUseTunnels &&
     position.y === tunnelRow &&
     direction === "right" &&
     position.x === width - 1
   )
     next.x = 0;
   else if (
-    playerCanUseTunnels &&
+    canUseTunnels &&
     position.x === verticalTunnelColumn &&
     direction === "up" &&
     position.y === 0
   )
     next.y = height - 1;
   else if (
-    playerCanUseTunnels &&
+    canUseTunnels &&
     position.x === verticalTunnelColumn &&
     direction === "down" &&
     position.y === height - 1
   )
     next.y = 0;
   if (
-    !playerCanUseTunnels &&
+    !canUseTunnels &&
     ((next.y === tunnelRow && (next.x === 0 || next.x === width - 1)) ||
       (next.x === verticalTunnelColumn &&
         (next.y === 0 || next.y === height - 1)))
@@ -345,11 +349,17 @@ function reverse(direction: Direction): Direction {
 }
 
 function moveEnemy(enemy: Enemy, maze: Maze): Enemy {
+  const canUseTunnels = enemy.kind === "ambusher";
   const candidates = (Object.keys(directions) as Direction[])
     .filter((direction) => direction !== reverse(enemy.direction))
     .map((direction) => ({
       direction,
-      position: destination(enemy.position, direction, maze.level, false),
+      position: destination(
+        enemy.position,
+        direction,
+        maze.level,
+        canUseTunnels,
+      ),
     }))
     .filter((move) => move.position !== null);
   const options =
@@ -362,7 +372,7 @@ function moveEnemy(enemy: Enemy, maze: Maze): Enemy {
               enemy.position,
               reverse(enemy.direction),
               maze.level,
-              false,
+              canUseTunnels,
             ),
           },
         ].filter((move) => move.position !== null);
@@ -404,7 +414,8 @@ function setupLevel(maze: Maze, level: number) {
   maze.goldenTicksLeft = 0;
   maze.graceTicksLeft = respawnGraceTicks;
   maze.pending = null;
-  maze.player = { position: { x: 1, y: 1 }, direction: "up" };
+  maze.started = false;
+  maze.player = { position: { x: 1, y: 1 }, direction: "right" };
 }
 
 function loseLife(maze: Maze) {
@@ -413,9 +424,10 @@ function loseLife(maze: Maze) {
     maze.status = "lost";
     return;
   }
-  maze.player = { position: { x: 1, y: 1 }, direction: "up" };
+  maze.player = { position: { x: 1, y: 1 }, direction: "right" };
   maze.enemies = actorsForLevel(maze.level);
   maze.pending = null;
+  maze.started = false;
   maze.tick = 0;
   maze.phase = "chase";
   maze.goldenTicksLeft = 0;
@@ -430,6 +442,11 @@ function collect(maze: Maze) {
     maze.goldenMovesTaken = 0;
     maze.goldenTicksLeft = goldenTicks;
     maze.score += goldenScore;
+    maze.goldenFruitProgress += 1;
+    if (maze.goldenFruitProgress >= 3) {
+      maze.goldenFruitProgress -= 3;
+      maze.lives += 1;
+    }
   } else if (maze.items.delete(playerIndex)) {
     maze.score += fruitScore;
   }
@@ -452,22 +469,32 @@ function expireGoldenIfMissed(maze: Maze) {
 
 export function advance(maze: Maze) {
   if (maze.paused || maze.status !== "playing") return;
+  if (!maze.started) {
+    const firstTurn = maze.pending;
+    if (
+      firstTurn &&
+      destination(maze.player.position, firstTurn.direction, maze.level)
+    )
+      maze.started = true;
+  }
   maze.notice = null;
   maze.tick += 1;
   if (maze.tick % (restTicks * 4) === 0) maze.phase = "rest";
   else if (maze.tick % (restTicks * 4) === restTicks) maze.phase = "chase";
 
-  const turn = maze.pending;
+  const turn = maze.started ? maze.pending : null;
   const previousPlayerIndex = index(maze.player.position);
-  const turnDestination =
-    turn && destination(maze.player.position, turn.direction, maze.level);
-  if (turn && turnDestination) {
-    maze.player = { position: turnDestination, direction: turn.direction };
-    maze.pending = null;
-  } else {
-    maze.player.position =
-      destination(maze.player.position, maze.player.direction, maze.level) ??
-      maze.player.position;
+  if (maze.started) {
+    const turnDestination =
+      turn && destination(maze.player.position, turn.direction, maze.level);
+    if (turn && turnDestination) {
+      maze.player = { position: turnDestination, direction: turn.direction };
+      maze.pending = null;
+    } else {
+      maze.player.position =
+        destination(maze.player.position, maze.player.direction, maze.level) ??
+        maze.player.position;
+    }
   }
   const playerMoved = index(maze.player.position) !== previousPlayerIndex;
   if (playerMoved && maze.golden !== null) maze.goldenMovesTaken += 1;

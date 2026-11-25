@@ -393,5 +393,5 @@ test("opens the maze after shared login and keeps its template private", async (
     headers: { cookie: `${cookie.name}=${cookie.value}` },
   });
   expect(maze.statusCode).toBe(200);
-  expect(maze.body).toContain("<h1>Лабиринт</h1>");
+  expect(maze.body).toContain("<h1>Ильсур-Пакман-Членоед</h1>");
 });

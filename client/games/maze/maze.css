@@ -26,6 +26,18 @@ footer,
   justify-content: center;
   gap: 12px;
 }
+header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 8px;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
 h1,
 p {
   margin: 0;
@@ -52,6 +64,22 @@ button {
   display: grid;
   width: min(calc(100vw - 16px), calc((100dvh - 100px) * 11 / 15), 440px);
   grid-template-columns: repeat(11, minmax(0, 1fr));
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background:
+    linear-gradient(#0b0b1c, #0b0b1c) padding-box,
+    linear-gradient(
+        135deg,
+        #ff4ecb,
+        #ffbe54 25%,
+        #f3ff67 42%,
+        #48f4ee 62%,
+        #9863ff 82%,
+        #ff4ecb
+      )
+      border-box;
+  box-shadow: 0 0 12px #e841d866;
 }
 .stats {
   white-space: nowrap;
@@ -63,6 +91,7 @@ button {
   text-align: right;
 }
 .tile {
+  position: relative;
   display: grid;
   place-items: center;
   aspect-ratio: 1;
@@ -73,35 +102,56 @@ button {
 }
 .tile::after {
   content: "";
-  border-radius: 50%;
+  display: block;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
 }
 .tile[data-tile="item"]::after {
-  width: 22%;
-  aspect-ratio: 1;
-  background: #fff;
-}
-.tile[data-tile="player"]::after {
-  width: 78%;
-  aspect-ratio: 1;
-  background: #f4db68;
-}
-.tile[data-tile^="enemy-"]::after {
-  width: 72%;
-  aspect-ratio: 1;
-  background: #ff7789;
-  border-radius: 10%;
-}
-.tile[data-tile="enemy-interceptor"]::after {
-  background: #bb91ff;
-}
-.tile[data-tile="enemy-patroller"]::after {
-  background: #62e2cc;
+  width: 100%;
+  height: 100%;
+  background-image: url("./assets/item-banana.webp");
+  transform: rotate(225deg);
 }
 .tile[data-tile="golden"]::after {
-  width: 48%;
-  aspect-ratio: 1;
-  background: #ffd85a;
-  box-shadow: 0 0 8px #ffd85a;
+  width: 94%;
+  height: 94%;
+  background-image: url("./assets/item-banana-golden.webp");
+  transform: rotate(180deg);
+}
+.tile[data-tile="player"]::after {
+  width: 96%;
+  height: 96%;
+  background-image: url("./assets/player-rooster.webp");
+}
+.tile[data-tile^="enemy-"]::after {
+  width: 96%;
+  height: 96%;
+}
+.tile[data-enemy-kind="pursuer"]::after {
+  background-image: url("./assets/enemy-rooster-red.webp");
+}
+.tile[data-enemy-kind="interceptor"]::after {
+  background-image: url("./assets/enemy-rooster-violet.webp");
+}
+.tile[data-enemy-kind="patroller"]::after {
+  background-image: url("./assets/enemy-rooster-teal.webp");
+}
+.tile[data-enemy-kind="ambusher"]::after {
+  background-image: url("./assets/enemy-rooster-blue.webp");
+}
+.tile[data-direction="down"]::after {
+  transform: rotate(90deg);
+}
+.tile[data-direction="left"]::after {
+  transform: scaleX(-1);
+}
+.tile[data-direction="up"]::after {
+  transform: rotate(-90deg);
+}
+.tile[data-tile="portal"]::after {
+  width: 0;
+  height: 0;
 }
 #restart {
   padding: 0;
@@ -186,9 +236,6 @@ button {
   .play {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 7fr) minmax(148px, 3fr);
-  }
-  .controls {
-    margin-inline-start: 32px;
   }
 }
 @media (any-pointer: coarse) and (orientation: landscape) {
