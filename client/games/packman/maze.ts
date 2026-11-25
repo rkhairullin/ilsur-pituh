@@ -197,6 +197,7 @@ type Maze = {
   items: Set<number>;
   golden: number | null;
   score: number;
+  caught: number;
   lives: number;
   status: "playing" | "lost";
   notice: "Карта пройдена!" | "Круг пройден!" | null;
@@ -271,6 +272,7 @@ export function createMaze(): Maze {
     items: itemsForLevel(1),
     golden: index(levels[0]!.golden),
     score: 0,
+    caught: 0,
     lives: 5,
     status: "playing",
     notice: null,
@@ -442,6 +444,7 @@ function collect(maze: Maze) {
     maze.goldenMovesTaken = 0;
     maze.goldenTicksLeft = goldenTicks;
     maze.score += goldenScore;
+    maze.caught += 1;
     maze.goldenFruitProgress += 1;
     if (maze.goldenFruitProgress >= 3) {
       maze.goldenFruitProgress -= 3;
@@ -449,6 +452,7 @@ function collect(maze: Maze) {
     }
   } else if (maze.items.delete(playerIndex)) {
     maze.score += fruitScore;
+    maze.caught += 1;
   }
   if (maze.items.size !== 0) return;
   if (maze.level === levelsCount) {

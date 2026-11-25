@@ -57,9 +57,31 @@ test("a completed round survives a network retry and appears in another browser 
     await page.getByRole("button", { name: "Повторить сохранение" }).click();
     await expect(page.getByText("Результат сохранён")).toBeVisible();
 
+    const packmanKey = "11111111-1111-4111-8111-111111111111";
+    const packmanStatuses = await page.evaluate(async (key) => {
+      const url = `/api/games/ilsur-pacman/rounds/${key}`;
+      const start = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const result = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caught: 7, circle: 2, round: 4 }),
+      });
+      return [start.status, result.status];
+    }, packmanKey);
+    expect(packmanStatuses).toEqual([204, 204]);
+
     await observer.getByRole("button", { name: "Обновить рейтинг" }).click();
     await expect(
       observer.getByText("Лидер теста · Очков: 10 · Членов напихано: 1"),
+    ).toBeVisible();
+    await expect(
+      observer.getByText(
+        "Лидер теста · Членов напихано: 7 · Круг: 2 · Раунд: 4",
+      ),
     ).toBeVisible();
     await observer
       .getByRole("link", { name: "Полный рейтинг" })
@@ -74,9 +96,28 @@ test("a completed round survives a network retry and appears in another browser 
       }),
     ).toBeVisible();
     await expect(observer.locator("dd")).toHaveText(["1", "10", "1"]);
+    await observer.goto("/");
+    await observer
+      .locator(".game-card")
+      .nth(1)
+      .getByRole("link", { name: "Полный рейтинг" })
+      .click();
+    await expect(
+      observer.getByText("Место: 1 · Членов напихано: 7 · Круг: 2 · Раунд: 4", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(observer.locator("main")).not.toContainText("Очков:");
     expect(
       await observer.evaluate(() => document.documentElement.scrollWidth),
     ).toBe(390);
+    await expect(observer.locator("main")).toHaveScreenshot(
+      "packman-rating-mobile.png",
+    );
+    await observer.setViewportSize({ width: 1280, height: 720 });
+    await expect(observer.locator("main")).toHaveScreenshot(
+      "packman-rating-desktop.png",
+    );
     await expect(
       page.getByRole("link", { name: "Рейтинг игры" }),
     ).toHaveAttribute("href", "./rating");

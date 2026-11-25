@@ -85,7 +85,7 @@ button {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-#score {
+#caught {
   display: inline-block;
   min-width: 7ch;
   text-align: right;
@@ -161,6 +161,60 @@ button {
   text-decoration: underline;
   cursor: pointer;
 }
+.overlay {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 20px;
+  background: #130a24f7;
+  text-align: center;
+}
+.overlay[hidden] {
+  display: none;
+}
+.overlay h1 {
+  margin: 0 0 12px;
+}
+.overlay button {
+  padding: 8px 18px;
+}
+#lost {
+  gap: 10px;
+}
+#lost p {
+  line-height: 1.5;
+}
+.result-actions {
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.result-actions a {
+  display: inline-grid;
+  min-width: 44px;
+  min-height: 44px;
+  place-items: center;
+  padding: 8px 14px;
+  border: 1px solid #8c9bb0;
+  border-radius: 4px;
+  background: #283445;
+}
+.result-actions #play-again {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid #8c9bb0;
+  background: #283445;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+#retry-result {
+  padding: 6px 12px;
+}
 .controls {
   display: none;
 }
@@ -224,9 +278,6 @@ button {
   }
   .controls [data-direction="down"] {
     grid-area: 3 / 2;
-  }
-  #status:empty {
-    display: none;
   }
 }
 @media (any-pointer: coarse) and (orientation: portrait) {

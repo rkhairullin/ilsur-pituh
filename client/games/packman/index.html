@@ -14,8 +14,8 @@
       <header>
         <h1>Ильсур-Пакман-Членоед</h1>
         <p class="stats">
-          Членов: <span id="score">0</span> · Жизни: <span id="lives">5</span> ·
-          Карта: <span id="level">1</span>/7 · Круг:
+          Членов напихано: <span id="caught">0</span> · Жизни:
+          <span id="lives">5</span> · Карта: <span id="level">1</span>/7 · Круг:
           <span id="circle">1</span>
         </p>
         <div class="header-actions">
@@ -46,9 +46,22 @@
           </button>
         </div>
       </section>
-      <footer>
-        <span id="status" role="status"></span>
-      </footer>
+      <section class="overlay" id="lost" hidden aria-labelledby="lost-title">
+        <h1 id="lost-title" lang="en">Gay over</h1>
+        <p>Членов напихано: <b id="final-caught">0</b></p>
+        <p>
+          Круг: <b id="final-circle">1</b> · Раунд: <b id="final-round">1</b>
+        </p>
+        <p id="result-status" aria-live="polite"></p>
+        <button id="retry-result" type="button" hidden>
+          Повторить сохранение
+        </button>
+        <div class="header-actions result-actions">
+          <a href="./rating">Рейтинг игры</a>
+          <button type="button" id="play-again">Сыграть ещё</button>
+          <a href="/">В каталог</a>
+        </div>
+      </section>
     </main>
     <script type="module" src="./main.ts"></script>
   </body>

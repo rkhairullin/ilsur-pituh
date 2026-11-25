@@ -265,7 +265,12 @@ export function registerLogin(app: FastifyInstance, options: LoginOptions) {
 
     app.post<{
       Params: { key: string };
-      Body: { score?: unknown; caught?: unknown };
+      Body: {
+        score?: unknown;
+        caught?: unknown;
+        circle?: unknown;
+        round?: unknown;
+      };
     }>(
       `/api/games/${entry.id}/rounds/:key`,
       { bodyLimit: 1024 },
@@ -288,16 +293,30 @@ export function registerLogin(app: FastifyInstance, options: LoginOptions) {
             : reply.code(409).send({ error: "Партия недоступна" });
         }
         const { score, caught } = body;
+        const isPackman = entry.id === "ilsur-pacman";
+        const circle = isPackman ? body.circle : 1;
+        const round = isPackman ? body.round : 1;
+        const caughtLimit = isPackman ? Number.MAX_SAFE_INTEGER : 1_000_000;
         if (
-          typeof score !== "number" ||
           typeof caught !== "number" ||
-          !Number.isSafeInteger(score) ||
           !Number.isSafeInteger(caught) ||
-          score % 10 !== 0 ||
           caught < 0 ||
-          caught > 1_000_000 ||
-          score < caught * 10 ||
-          score > caught * 50
+          caught > caughtLimit ||
+          (isPackman &&
+            (typeof circle !== "number" ||
+              !Number.isSafeInteger(circle) ||
+              circle < 1 ||
+              circle > Number.MAX_SAFE_INTEGER ||
+              typeof round !== "number" ||
+              !Number.isSafeInteger(round) ||
+              round < 1 ||
+              round > 7)) ||
+          (!isPackman &&
+            (typeof score !== "number" ||
+              !Number.isSafeInteger(score) ||
+              score % 10 !== 0 ||
+              score < caught * 10 ||
+              score > caught * 50))
         ) {
           return reply.code(400).send({ error: "Неверный результат партии" });
         }
@@ -306,8 +325,10 @@ export function registerLogin(app: FastifyInstance, options: LoginOptions) {
           key,
           player.id,
           session,
-          score,
+          isPackman ? null : (score as number),
           caught,
+          circle as number,
+          round as number,
         )
           ? reply.code(204).send()
           : reply

@@ -43,14 +43,14 @@ test("supports keyboard play, buffered turn, focus and restart", async ({
     "data-tile",
     "player",
   );
-  await expect(page.locator("#score")).toHaveText("0");
+  await expect(page.locator("#caught")).toHaveText("0");
   await expect(field.locator(".tile").nth(firstEnemyStart)).not.toHaveAttribute(
     "data-tile",
     /^enemy-/,
   );
   await page.keyboard.press("ArrowRight");
   await page.clock.runFor(280);
-  await expect(page.locator("#score")).toHaveText("1");
+  await expect(page.locator("#caught")).toHaveText("1");
   await page.keyboard.press("s");
   await page.clock.runFor(840);
   await expect(field.locator(".tile").nth(26)).toHaveAttribute(
@@ -86,8 +86,46 @@ test("supports keyboard play, buffered turn, focus and restart", async ({
     "up",
   );
   await page.getByRole("button", { name: "Начать заново" }).click();
-  await expect(page.locator("#score")).toHaveText("0");
+  await expect(page.locator("#caught")).toHaveText("0");
   await expect(page.locator("#lives")).toHaveText("5");
+});
+
+test("shows the Gay over summary and saves progress after the last life", async ({
+  page,
+}) => {
+  await openMaze(page);
+  await page.keyboard.press("ArrowRight");
+  await page.clock.runFor(280);
+  await expect(page.locator("#caught")).toHaveText("1");
+  await page.evaluate(() => {
+    window.setInterval(() => {
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ArrowRight", bubbles: true }),
+      );
+    }, 280);
+  });
+  for (let elapsed = 0; elapsed < 120_000; elapsed += 1_000)
+    await page.clock.runFor(1_000);
+  await expect(page.getByRole("heading", { name: "Gay over" })).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(page.locator("#final-caught")).toHaveText(/\d+/);
+  await expect(page.locator("#final-circle")).toHaveText(/\d+/);
+  await expect(page.locator("#final-round")).toHaveText(/\d+/);
+  await expect(page.locator("#result-status")).toHaveText("Результат сохранён");
+  await expect(page.locator("#lost")).toHaveScreenshot(
+    "packman-gameover-desktop.png",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator("#lost")).toHaveScreenshot(
+    "packman-gameover-mobile.png",
+  );
+  await page.getByRole("button", { name: "Сыграть ещё" }).click();
+  await expect(page.locator("#lost")).toBeHidden();
+  await expect(page.locator("#caught")).toHaveText("0");
+  await expect(page.locator("#lives")).toHaveText("5");
+  await expect(page.locator("#level")).toHaveText("1");
+  await expect(page.locator("#circle")).toHaveText("1");
 });
 
 test("renders a readable desktop map @visual", async ({ page }) => {
@@ -235,7 +273,7 @@ test.describe("touch layout", () => {
 
     await page.getByRole("button", { name: "Вправо" }).tap();
     await page.clock.runFor(280);
-    await expect(page.locator("#score")).toHaveText("1");
+    await expect(page.locator("#caught")).toHaveText("1");
     await expect(page.locator("[data-tile='player']")).toHaveAttribute(
       "data-direction",
       "right",
@@ -247,14 +285,14 @@ test.describe("touch layout", () => {
     await expect(page.locator(".rotate-notice")).toBeVisible();
     await expect(field).toBeHidden();
     await page.clock.runFor(1000);
-    await expect(page.locator("#score")).toHaveText("1");
+    await expect(page.locator("#caught")).toHaveText("1");
     await expect(page.locator("#lives")).toHaveText("5");
     await page.setViewportSize({ width: 375, height: 667 });
     await expect(field).toBeVisible();
     await page.getByRole("button", { name: "Начать заново" }).click();
     await page.getByRole("button", { name: "Вправо" }).tap();
     await page.clock.runFor(280);
-    await expect(page.locator("#score")).toHaveText("1");
+    await expect(page.locator("#caught")).toHaveText("1");
   });
 
   test("keeps the score on one line and leaves tunnel cells empty", async ({
@@ -281,7 +319,7 @@ test.describe("touch layout", () => {
       ).not.toHaveAttribute("data-tile", "item");
     await page.getByRole("button", { name: "Вправо" }).tap();
     await page.clock.runFor(280);
-    await expect(page.locator("#score")).toHaveText("1");
+    await expect(page.locator("#caught")).toHaveText("1");
     expect((await stats.boundingBox())!.height).toBe(initialHeight);
   });
 
