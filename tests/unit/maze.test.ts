@@ -4,7 +4,7 @@ import {
   cancelTurn,
   cell,
   circleBonus,
-  createMaze,
+  createMaze as createIdleMaze,
   destination,
   directions,
   enemyCountForLevel,
@@ -25,7 +25,57 @@ import {
   type Direction,
 } from "../../client/games/maze/maze.js";
 
+function createMaze() {
+  const maze = createIdleMaze();
+  maze.started = true;
+  return maze;
+}
+
 describe("seven-map maze", () => {
+  it("faces right at spawn and waits for the first valid direction input", () => {
+    const maze = createIdleMaze();
+    const initialEnemyPositions = maze.enemies.map(({ position }) => ({
+      ...position,
+    }));
+    expect(maze.player).toEqual({
+      position: { x: 1, y: 1 },
+      direction: "right",
+    });
+    for (let tick = 0; tick < 8; tick += 1) advance(maze);
+    expect(maze.player.position).toEqual({ x: 1, y: 1 });
+    expect(maze.started).toBe(false);
+    expect(maze.enemies[0]!.position).not.toEqual(initialEnemyPositions[0]);
+    requestTurn(maze, "up", -1);
+    advance(maze);
+    expect(maze.player.position).toEqual({ x: 1, y: 1 });
+    expect(maze.started).toBe(false);
+    maze.items = new Set([index({ x: 2, y: 1 })]);
+    requestTurn(maze, "right", -1);
+    advance(maze);
+    expect(maze.level).toBe(2);
+    expect(maze.player).toEqual({
+      position: { x: 1, y: 1 },
+      direction: "right",
+    });
+    expect(maze.started).toBe(false);
+    const nextMapEnemyPositions = maze.enemies.map(({ position }) => ({
+      ...position,
+    }));
+    for (let tick = 0; tick < 4; tick += 1) advance(maze);
+    expect(maze.player.position).toEqual({ x: 1, y: 1 });
+    expect(
+      maze.enemies.some(
+        ({ position }, enemyIndex) =>
+          position.x !== nextMapEnemyPositions[enemyIndex]!.x ||
+          position.y !== nextMapEnemyPositions[enemyIndex]!.y,
+      ),
+    ).toBe(true);
+    requestTurn(maze, "right", -1);
+    advance(maze);
+    expect(maze.player.position).toEqual({ x: 2, y: 1 });
+    expect(maze.started).toBe(true);
+  });
+
   it("has seven connected maps with reachable items, golden fruit and valid spawns", () => {
     for (let level = 1; level <= levelsCount; level += 1) {
       const definition = levelInfo(level)!;
@@ -100,6 +150,7 @@ describe("seven-map maze", () => {
 
   it("blocks walls, buffers turns, collects each item once and cancels matching input", () => {
     const maze = createMaze();
+    maze.player.direction = "up";
     expect(maze.enemies).toHaveLength(1);
     expect(destination({ x: 1, y: 1 }, "up")).toBeNull();
     advance(maze);
@@ -143,6 +194,27 @@ describe("seven-map maze", () => {
     expect(destination({ x: 5, y: 1 }, "up", 1, false)).toBeNull();
     expect(destination({ x: 1, y: tunnelRow }, "left", 1, false)).toBeNull();
   });
+
+  it.each([
+    ["left", { x: 0, y: tunnelRow }, { x: width - 1, y: tunnelRow }, 3],
+    ["right", { x: width - 1, y: tunnelRow }, { x: 0, y: tunnelRow }, 3],
+    ["up", { x: 5, y: 0 }, { x: 5, y: height - 1 }, 1],
+    ["down", { x: 5, y: height - 1 }, { x: 5, y: 0 }, 1],
+  ] as const)(
+    "lets the fourth rooster cross the map through the %s tunnel",
+    (direction, from, to, previousTick) => {
+      const maze = createMaze();
+      maze.enemies = [{ position: from, direction, kind: "ambusher" }];
+      maze.player = { position: { x: 5, y: 5 }, direction: "right" };
+      maze.tick = previousTick;
+      maze.graceTicksLeft = 100;
+
+      advance(maze);
+
+      expect(maze.enemies[0]!.position).toEqual(to);
+      expect(maze.enemies[0]!.direction).toBe(direction);
+    },
+  );
 
   it("leaves all tunnel passage cells free of score items on every map", () => {
     const maze = createMaze();
@@ -203,6 +275,20 @@ describe("seven-map maze", () => {
     expect(maze.phase).toBe("chase");
   });
 
+  it("chooses a farther rest move when the player is at an intersection", () => {
+    const maze = createMaze();
+    maze.phase = "rest";
+    maze.graceTicksLeft = 100;
+    maze.player = { position: { x: 5, y: 5 }, direction: "up" };
+    maze.enemies = [
+      { position: { x: 5, y: 3 }, direction: "down", kind: "pursuer" },
+    ];
+    maze.tick = 1;
+    advance(maze);
+    expect(maze.player.position).toEqual({ x: 5, y: 4 });
+    expect(maze.enemies[0]!.position).toEqual({ x: 4, y: 3 });
+  });
+
   it("collects golden fruit for a timed distraction and bonus", () => {
     const maze = createMaze();
     maze.golden = index({ x: 2, y: 1 });
@@ -217,6 +303,8 @@ describe("seven-map maze", () => {
     expect(maze.golden).toBeNull();
     expect(maze.goldenMovesTaken).toBe(0);
     expect(maze.goldenTicksLeft).toBe(goldenTicks);
+    expect(maze.lives).toBe(5);
+    expect(maze.goldenFruitProgress).toBe(1);
     advance(maze);
     expect(maze.goldenTicksLeft).toBe(goldenTicks - 1);
     maze.paused = true;
@@ -227,6 +315,7 @@ describe("seven-map maze", () => {
 
   it("keeps the golden fruit through 20 moves and turns it ordinary after move 21", () => {
     const maze = createMaze();
+    maze.player.direction = "up";
     maze.enemies = [];
     maze.graceTicksLeft = goldenWindowMoves + 1;
     const golden = maze.golden!;
@@ -282,6 +371,45 @@ describe("seven-map maze", () => {
     expect(maze.goldenMovesTaken).toBe(0);
   });
 
+  it.each([
+    [3, 4],
+    [5, 6],
+  ])(
+    "adds a life on the third golden fruit (%i becomes %i)",
+    (lives, expectedLives) => {
+      const maze = createMaze();
+      maze.lives = lives;
+      maze.goldenFruitProgress = 2;
+      maze.golden = index({ x: 2, y: 1 });
+      maze.items = new Set([index({ x: 2, y: 1 }), index({ x: 3, y: 1 })]);
+
+      requestTurn(maze, "right", -1);
+      advance(maze);
+
+      expect(maze.lives).toBe(expectedLives);
+      expect(maze.goldenFruitProgress).toBe(0);
+    },
+  );
+
+  it("keeps golden-fruit progress across map changes and lost lives", () => {
+    const maze = createMaze();
+    maze.goldenFruitProgress = 2;
+    maze.items = new Set([index({ x: 2, y: 1 })]);
+    requestTurn(maze, "right", -1);
+    advance(maze);
+    expect(maze.level).toBe(2);
+    expect(maze.goldenFruitProgress).toBe(2);
+
+    maze.graceTicksLeft = 0;
+    maze.player = { position: { x: 2, y: 1 }, direction: "up" };
+    maze.enemies = [
+      { position: { x: 2, y: 1 }, direction: "left", kind: "pursuer" },
+    ];
+    advance(maze);
+    expect(maze.lives).toBe(4);
+    expect(maze.goldenFruitProgress).toBe(2);
+  });
+
   it("removes one life on collision, preserves progress, then ends after the last life", () => {
     const maze = createMaze();
     maze.items.delete(index({ x: 2, y: 1 }));
@@ -294,10 +422,15 @@ describe("seven-map maze", () => {
     expect(maze.items.has(index({ x: 2, y: 1 }))).toBe(false);
     expect(maze.player.position).toEqual({ x: 1, y: 1 });
     expect(maze.graceTicksLeft).toBe(respawnGraceTicks);
+    expect(maze.started).toBe(false);
+    const enemyAtRespawn = { ...maze.enemies[0]!.position };
+    for (let tick = 0; tick < 4; tick += 1) advance(maze);
+    expect(maze.player.position).toEqual({ x: 1, y: 1 });
+    expect(maze.enemies[0]!.position).not.toEqual(enemyAtRespawn);
     maze.graceTicksLeft = 0;
     maze.enemies.forEach((enemy) => (enemy.position = { x: 2, y: 1 }));
-    maze.player.direction = "right";
     maze.lives = 1;
+    requestTurn(maze, "right", -1);
     advance(maze);
     expect(maze.lives).toBe(0);
     expect(maze.status).toBe("lost");

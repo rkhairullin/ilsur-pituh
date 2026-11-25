@@ -16,12 +16,8 @@ const score = document.querySelector<HTMLElement>("#score")!;
 const lives = document.querySelector<HTMLElement>("#lives")!;
 const level = document.querySelector<HTMLElement>("#level")!;
 const circle = document.querySelector<HTMLElement>("#circle")!;
-const phase = document.querySelector<HTMLElement>("#phase")!;
 const status = document.querySelector<HTMLElement>("#status")!;
 const coarseTouch = matchMedia("(any-pointer: coarse)");
-const portraitTouch = matchMedia(
-  "(any-pointer: coarse) and (orientation: portrait)",
-);
 const keys: Partial<Record<string, Direction>> = {
   ArrowUp: "up",
   ArrowDown: "down",
@@ -59,6 +55,7 @@ function turnOnScreen(direction: Direction, source: number) {
 
 function render() {
   const player = index(maze.player.position);
+  field.dataset.level = String(maze.level);
   tiles.forEach(({ tile }, offset) => {
     const position = { x: offset % width, y: Math.floor(offset / width) };
     const wall = cell(position, maze.level) === "#";
@@ -80,12 +77,17 @@ function render() {
                 ? "item"
                 : "empty";
     if (tile.dataset.tile !== appearance) tile.dataset.tile = appearance;
+    const direction =
+      appearance === "player" ? maze.player.direction : enemy?.direction;
+    if (direction) tile.dataset.direction = direction;
+    else delete tile.dataset.direction;
+    if (enemy) tile.dataset.enemyKind = enemy.kind;
+    else delete tile.dataset.enemyKind;
   });
   score.textContent = String(maze.score);
   lives.textContent = String(maze.lives);
   level.textContent = String(maze.level);
   circle.textContent = String(maze.circle);
-  phase.textContent = maze.phase === "chase" ? "Погоня" : "Передышка";
   const message = maze.notice ?? (maze.status === "lost" ? "Gay over" : "");
   if (status.textContent !== message) status.textContent = message;
 }
@@ -130,7 +132,7 @@ render();
 function frame() {
   frameTimer = null;
   if (maze.status !== "playing") return;
-  if (coarseTouch.matches && !portraitTouch.matches) {
+  if (coarseTouch.matches && window.innerWidth > window.innerHeight) {
     scheduleFrame(250);
     return;
   }

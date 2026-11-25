@@ -38,10 +38,10 @@ test("renders play, pointer input and a fresh round", async () => {
   const lives = new Element();
   const level = new Element();
   const circle = new Element();
-  const phase = new Element();
   const status = new Element();
   const restart = new Button();
   const right = new Button();
+  const screen = { innerWidth: 375, innerHeight: 667, setTimeout };
   right.dataset.direction = "right";
   const down = new Button();
   down.dataset.direction = "down";
@@ -51,7 +51,6 @@ test("renders play, pointer input and a fresh round", async () => {
     ["#lives", lives],
     ["#level", level],
     ["#circle", circle],
-    ["#phase", phase],
     ["#status", status],
     ["#restart", restart],
   ]);
@@ -61,7 +60,7 @@ test("renders play, pointer input and a fresh round", async () => {
     createElement: () => new Element(),
   });
   vi.stubGlobal("document", document);
-  vi.stubGlobal("window", { setTimeout });
+  vi.stubGlobal("window", screen);
   const coarseTouch = { matches: true };
   const portraitTouch = { matches: true };
   vi.stubGlobal("matchMedia", (query: string) =>
@@ -89,15 +88,24 @@ test("renders play, pointer input and a fresh round", async () => {
   expect(lives.textContent).toBe("5");
   expect(level.textContent).toBe("1");
   expect(circle.textContent).toBe("1");
-  expect(phase.textContent).toBe("Погоня");
   expect(
     field.children.filter(({ dataset }) => dataset.tile?.startsWith("enemy-")),
   ).toHaveLength(1);
+  expect(
+    field.children.find(({ dataset }) => dataset.tile === "player")?.dataset
+      .direction,
+  ).toBe("right");
+  const firstEnemy = field.children.find(({ dataset }) =>
+    dataset.tile?.startsWith("enemy-"),
+  );
+  expect(firstEnemy?.dataset.direction).toBe("left");
+  expect(firstEnemy?.dataset.enemyKind).toBe("pursuer");
   key("ShiftLeft");
   key("ArrowRight", restart);
   key("ArrowRight", new Anchor());
   vi.advanceTimersByTime(280);
   expect(player()).toBe(engine.index({ x: 1, y: 1 }));
+  expect(score.textContent).toBe("0");
 
   dispatch(right, "pointerdown", { pointerId: 1 });
   dispatch(right, "click", { detail: 1 });
@@ -112,6 +120,10 @@ test("renders play, pointer input and a fresh round", async () => {
   vi.advanceTimersByTime(1);
   expect(player()).toBe(engine.index({ x: 2, y: 1 }));
   expect(score.textContent).toBe("1");
+  expect(
+    field.children.find(({ dataset }) => dataset.tile === "player")?.dataset
+      .direction,
+  ).toBe("right");
   key("KeyS");
   vi.advanceTimersByTime(840);
   expect(player()).toBe(engine.index({ x: 4, y: 2 }));
@@ -122,9 +134,14 @@ test("renders play, pointer input and a fresh round", async () => {
   expect(player()).toBe(engine.index({ x: 1, y: 1 }));
 
   portraitTouch.matches = false;
+  screen.innerWidth = 844;
+  screen.innerHeight = 285;
+  dispatch(right, "click", { detail: 0 });
   vi.advanceTimersByTime(1000);
   expect(player()).toBe(engine.index({ x: 1, y: 1 }));
   portraitTouch.matches = true;
+  screen.innerWidth = 375;
+  screen.innerHeight = 667;
   dispatch(right, "click", { detail: 0 });
   vi.advanceTimersByTime(280);
   expect(player()).toBe(engine.index({ x: 2, y: 1 }));
@@ -138,6 +155,10 @@ test("renders play, pointer input and a fresh round", async () => {
   expect(status.textContent).toBe("Карта пройдена!");
   vi.advanceTimersByTime(560);
   expect(player()).toBe(engine.index({ x: 1, y: 1 }));
+  expect(
+    field.children.find(({ dataset }) => dataset.tile === "player")?.dataset
+      .direction,
+  ).toBe("right");
 });
 
 test("restart after defeat starts a fresh game loop", async () => {
@@ -209,4 +230,77 @@ test("restart after defeat starts a fresh game loop", async () => {
   vi.advanceTimersByTime(280);
   expect(status.textContent).toBe("Gay over");
   expect(vi.getTimerCount()).toBe(0);
+});
+
+test("renders four distinct enemy heads on the final map", async () => {
+  vi.useFakeTimers();
+  const field = new Element();
+  const maze = engine.createMaze();
+  maze.level = 7;
+  maze.enemies = [
+    {
+      position: { x: 7, y: 5 },
+      direction: "left",
+      kind: "pursuer",
+    },
+    {
+      position: { x: 9, y: 5 },
+      direction: "down",
+      kind: "interceptor",
+    },
+    {
+      position: { x: 7, y: 9 },
+      direction: "up",
+      kind: "patroller",
+    },
+    {
+      position: { x: 9, y: 9 },
+      direction: "right",
+      kind: "ambusher",
+    },
+  ];
+  const elements = new Map([
+    ["#field", field],
+    ["#score", new Element()],
+    ["#lives", new Element()],
+    ["#level", new Element()],
+    ["#circle", new Element()],
+    ["#phase", new Element()],
+    ["#status", new Element()],
+    ["#restart", new Button()],
+  ]);
+  const document = Object.assign(new EventTarget(), {
+    querySelector: (selector: string) => elements.get(selector),
+    querySelectorAll: () => [],
+    createElement: () => new Element(),
+  });
+  vi.stubGlobal("document", document);
+  vi.stubGlobal("window", { setTimeout });
+  vi.stubGlobal("matchMedia", () => ({ matches: false }));
+  vi.stubGlobal("HTMLButtonElement", Button);
+  vi.stubGlobal("HTMLAnchorElement", Anchor);
+  vi.doMock("../../client/games/maze/maze.js", async () => ({
+    ...(await vi.importActual<typeof engine>(
+      "../../client/games/maze/maze.js",
+    )),
+    createMaze: () => maze,
+  }));
+  await import("../../client/games/maze/main.js");
+
+  const enemies = field.children.filter(({ dataset }) =>
+    dataset.tile?.startsWith("enemy-"),
+  );
+  expect(enemies).toHaveLength(4);
+  expect(enemies.map(({ dataset }) => dataset.enemyKind).sort()).toEqual([
+    "ambusher",
+    "interceptor",
+    "patroller",
+    "pursuer",
+  ]);
+  expect(enemies.map(({ dataset }) => dataset.direction)).toEqual([
+    "left",
+    "down",
+    "up",
+    "right",
+  ]);
 });
