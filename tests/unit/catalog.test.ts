@@ -37,6 +37,8 @@ test("awards medals to the first three places and shows the latest game separate
     nickname: `Игрок ${place}`,
     score: 50,
     caught: 5,
+    circle: 1,
+    round: 1,
     finishedAt: 0,
   }));
   const page = renderRating(
@@ -59,4 +61,32 @@ test("awards medals to the first three places and shows the latest game separate
   expect(page).toContain("<li>Игрок 4");
   expect(page).toContain("Место: 1 · Очков: 50");
   expect(page).toContain("Последняя игра · Очков: 10");
+});
+
+test("renders the Packman leaderboard without points and includes progress and dates", () => {
+  const record = {
+    place: 1,
+    nickname: "Лабиринтный игрок",
+    score: null,
+    caught: 25,
+    circle: 3,
+    round: 6,
+    finishedAt: Date.UTC(2026, 0, 2),
+  };
+  const page = renderRating(
+    games[1]!,
+    [record],
+    record,
+    { games: 4, score: 0, caught: 80 },
+    record,
+  );
+  expect(page).toContain(
+    "🥇 Лабиринтный игрок · Членов напихано: 25 · Круг: 3 · Раунд: 6 · Дата: 2026-01-02",
+  );
+  expect(page).toContain("Место: 1 · Членов напихано: 25 · Круг: 3 · Раунд: 6");
+  expect(page).toContain("За всё время</h2>");
+  expect(page).toContain("Сыграно партий:</dt><dd>4");
+  expect(page).toContain("Членов напихано:</dt><dd>80");
+  expect(page).not.toContain("Очков:");
+  expect(page).not.toContain("Очков</dt>");
 });

@@ -41,9 +41,9 @@ function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => entities[character]!);
 }
 
-function renderRecords(records: RecordEntry[], withDate = false) {
+function renderRecords(records: RecordEntry[], withDate = false, gameId = "") {
   if (!records.length) return "<p>Пока нет результатов</p>";
-  return `<ol>${records.map((record) => `<li>${withDate ? (["🥇 ", "🥈 ", "🥉 "][record.place - 1] ?? "") : ""}${escapeHtml(record.nickname)} · Очков: ${record.score} · Членов напихано: ${record.caught}${withDate ? ` · Дата: ${new Date(record.finishedAt).toISOString().slice(0, 10)}` : ""}</li>`).join("")}</ol>`;
+  return `<ol>${records.map((record) => `<li>${withDate ? (["🥇 ", "🥈 ", "🥉 "][record.place - 1] ?? "") : ""}${escapeHtml(record.nickname)}${gameId === "ilsur-pacman" ? ` · Членов напихано: ${record.caught} · Круг: ${record.circle} · Раунд: ${record.round}` : ` · Очков: ${record.score} · Членов напихано: ${record.caught}`}${withDate ? ` · Дата: ${new Date(record.finishedAt).toISOString().slice(0, 10)}` : ""}</li>`).join("")}</ol>`;
 }
 
 export function renderRating(
@@ -51,8 +51,14 @@ export function renderRating(
   records: RecordEntry[],
   personal: RecordEntry | undefined,
   totals: { games: number; score: number; caught: number },
-  latest?: Pick<RecordEntry, "score" | "caught">,
+  latest?: Pick<RecordEntry, "score" | "caught"> &
+    Partial<Pick<RecordEntry, "circle" | "round">>,
 ) {
+  const isPackman = game.id === "ilsur-pacman";
+  const recordSummary = (record: RecordEntry) =>
+    isPackman
+      ? `Членов напихано: ${record.caught} · Круг: ${record.circle} · Раунд: ${record.round}`
+      : `Очков: ${record.score} · Членов напихано: ${record.caught}`;
   return `<!doctype html>
 <html lang="ru">
 <head>
@@ -68,11 +74,11 @@ export function renderRating(
 <main class="catalog rating-page">
 <nav><a class="catalog-button" href="/">Каталог игр</a> <a class="catalog-button" href="${game.href}instructions">Играть</a></nav>
 <h1>Рейтинг · ${game.title}</h1>
-<section><h2>Топ-20</h2>${renderRecords(records, true)}</section>
-<section><h2>Твоё место</h2><p>${personal ? `Место: ${personal.place} · Очков: ${personal.score} · Членов напихано: ${personal.caught}` : "У тебя пока нет результата"}</p>${latest ? `<p>Последняя игра · Очков: ${latest.score} · Членов напихано: ${latest.caught}</p>` : ""}</section>
+<section><h2>Топ-20</h2>${renderRecords(records, true, game.id)}</section>
+<section><h2>Твоё место</h2><p>${personal ? `Место: ${personal.place} · ${recordSummary(personal)}` : "У тебя пока нет результата"}</p>${latest ? `<p>Последняя игра · ${isPackman ? `Членов напихано: ${latest.caught} · Круг: ${latest.circle} · Раунд: ${latest.round}` : `Очков: ${latest.score} · Членов напихано: ${latest.caught}`}</p>` : ""}</section>
 <section><h2>За всё время</h2><dl>
 <dt>Сыграно партий:</dt><dd>${totals.games}</dd>
-<dt>Очков:</dt><dd>${totals.score}</dd>
+${isPackman ? "" : `<dt>Очков:</dt><dd>${totals.score}</dd>`}
 <dt>Членов напихано:</dt><dd>${totals.caught}</dd>
 </dl></section>
 </main>
@@ -94,7 +100,7 @@ export function renderCatalog(
   <div class="game-card__body">
     <h2>${game.title}</h2>
     <p class="game-card__description">${game.description}</p>
-    <div class="game-card__rating"><h3>Топ-5</h3>${renderRecords(top(game.id))}<a href="${game.href}rating">Полный рейтинг</a></div>
+    <div class="game-card__rating"><h3>Топ-5</h3>${renderRecords(top(game.id), false, game.id)}<a href="${game.href}rating">Полный рейтинг</a></div>
     <a class="catalog-button" href="${game.href}instructions">К игре</a>
   </div>
 </article>`,

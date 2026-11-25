@@ -337,6 +337,112 @@ test("saves a round once, preserves the best result, and persists personal total
   }
 });
 
+test("saves Packman progress separately and refreshes both catalog rankings", async () => {
+  const app = makeApp();
+  const alice = String(
+    (await enter(app, "Пакманист")).headers["set-cookie"],
+  ).split(";")[0]!;
+  const bob = String(
+    (await enter(app, "Другой игрок")).headers["set-cookie"],
+  ).split(";")[0]!;
+  const url = (id: string) =>
+    `/api/games/ilsur-pacman/rounds/00000000-0000-0000-0000-${id}`;
+  const post = (path: string, cookie: string, payload?: object) =>
+    app.inject({ method: "POST", url: path, headers: { cookie }, payload });
+  try {
+    expect(
+      (await app.inject({ url: "/packman/rating", headers: { cookie: alice } }))
+        .body,
+    ).toContain("У тебя пока нет результата");
+    expect((await post(url("000000000001"), alice, {})).statusCode).toBe(204);
+    for (const payload of [
+      { caught: 2, circle: 0, round: 1 },
+      { caught: 2, circle: 1, round: 8 },
+      { caught: 2, circle: 1, round: 1.5 },
+      { caught: -1, circle: 1, round: 1 },
+      { caught: 1, circle: "2", round: 1 },
+    ])
+      expect((await post(url("000000000001"), alice, payload)).statusCode).toBe(
+        400,
+      );
+    const result = { caught: 120, circle: 3, round: 6 };
+    expect((await post(url("000000000001"), alice, result)).statusCode).toBe(
+      204,
+    );
+    expect((await post(url("000000000001"), alice, result)).statusCode).toBe(
+      204,
+    );
+    expect(
+      (await post(url("000000000001"), alice, { ...result, round: 5 }))
+        .statusCode,
+    ).toBe(409);
+    expect((await post(url("000000000002"), bob, {})).statusCode).toBe(204);
+    expect(
+      (
+        await post(url("000000000002"), bob, {
+          caught: 120,
+          circle: 3,
+          round: 4,
+        })
+      ).statusCode,
+    ).toBe(204);
+    expect((await post(url("000000000003"), alice, {})).statusCode).toBe(204);
+    expect(
+      (
+        await post(
+          "/api/games/ilsur-lovit-chleny/rounds/00000000-0000-0000-0000-000000000003",
+          alice,
+          {},
+        )
+      ).statusCode,
+    ).toBe(204);
+    expect(
+      (
+        await post(
+          "/api/games/ilsur-lovit-chleny/rounds/00000000-0000-0000-0000-000000000003",
+          alice,
+          { score: 40, caught: 2 },
+        )
+      ).statusCode,
+    ).toBe(204);
+
+    const catalog = await app.inject({ url: "/", headers: { cookie: alice } });
+    expect(catalog.body).toContain(
+      "Пакманист · Членов напихано: 120 · Круг: 3 · Раунд: 6",
+    );
+    expect(catalog.body).toContain(
+      "Пакманист · Очков: 40 · Членов напихано: 2",
+    );
+    expect(catalog.body).toContain('href="/packman/rating"');
+
+    const rating = await app.inject({
+      url: "/packman/rating",
+      headers: { cookie: alice },
+    });
+    expect(rating.body).toContain(
+      "Место: 1 · Членов напихано: 120 · Круг: 3 · Раунд: 6",
+    );
+    expect(rating.body).toContain(
+      "Последняя игра · Членов напихано: 120 · Круг: 3 · Раунд: 6",
+    );
+    expect(rating.body).toContain("Сыграно партий:</dt><dd>1</dd>");
+    expect(rating.body).not.toContain("Очков:");
+    expect(rating.body).not.toContain("40");
+    expect((await post(url("000000000004"), alice, {})).statusCode).toBe(204);
+    expect(
+      (
+        await post(url("000000000004"), alice, {
+          caught: 1_000_001,
+          circle: 9_000,
+          round: 7,
+        })
+      ).statusCode,
+    ).toBe(204);
+  } finally {
+    await Promise.all(apps.splice(0).map((running) => running.close()));
+  }
+});
+
 test("requires login for instructions and returns to them after login", async () => {
   const app = makeApp();
   const url = "/ilsur-lovit-chleny/instructions";

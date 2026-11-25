@@ -12,11 +12,18 @@ import {
 } from "./maze.js";
 
 const field = document.querySelector<HTMLElement>("#field")!;
-const score = document.querySelector<HTMLElement>("#score")!;
+const caught = document.querySelector<HTMLElement>("#caught")!;
 const lives = document.querySelector<HTMLElement>("#lives")!;
 const level = document.querySelector<HTMLElement>("#level")!;
 const circle = document.querySelector<HTMLElement>("#circle")!;
-const status = document.querySelector<HTMLElement>("#status")!;
+const lost = document.querySelector<HTMLElement>("#lost")!;
+const finalCaught = document.querySelector<HTMLElement>("#final-caught")!;
+const finalCircle = document.querySelector<HTMLElement>("#final-circle")!;
+const finalRound = document.querySelector<HTMLElement>("#final-round")!;
+const resultStatus = document.querySelector<HTMLElement>("#result-status")!;
+const retryResult = document.querySelector<HTMLButtonElement>("#retry-result")!;
+const restart = document.querySelector<HTMLButtonElement>("#restart")!;
+const playAgain = document.querySelector<HTMLButtonElement>("#play-again")!;
 const coarseTouch = matchMedia("(any-pointer: coarse)");
 const keys: Partial<Record<string, Direction>> = {
   ArrowUp: "up",
@@ -40,6 +47,52 @@ const tiles = Array.from({ length: width * height }, (_, offset) => {
 
 let maze = createMaze();
 let frameTimer: number | null = null;
+let currentRound: { key: string; started: Promise<boolean> };
+let pendingResult: { caught: number; circle: number; round: number };
+
+async function sendRound(key: string, body: object) {
+  try {
+    const response = await fetch(`/api/games/ilsur-pacman/rounds/${key}`, {
+      method: "POST",
+      keepalive: true,
+      signal: AbortSignal.timeout(8000),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+function startRound() {
+  const key = crypto.randomUUID();
+  currentRound = { key, started: sendRound(key, {}) };
+}
+
+async function saveResult() {
+  playAgain.disabled = true;
+  retryResult.hidden = true;
+  resultStatus.textContent = "Сохраняем результат…";
+  const { key, started } = currentRound;
+  const registered = (await started) || (await sendRound(key, {}));
+  const saved = registered && (await sendRound(key, pendingResult));
+  resultStatus.textContent = saved
+    ? "Результат сохранён"
+    : "Результат не подтверждён. Повтори сохранение.";
+  retryResult.hidden = saved;
+  playAgain.disabled = false;
+}
+
+function startNewGame() {
+  maze = createMaze();
+  startRound();
+  resultStatus.textContent = "";
+  retryResult.hidden = true;
+  render();
+  field.focus();
+  startFrames();
+}
 
 function scheduleFrame(delay: number) {
   frameTimer = window.setTimeout(frame, delay);
@@ -84,20 +137,22 @@ function render() {
     if (enemy) tile.dataset.enemyKind = enemy.kind;
     else delete tile.dataset.enemyKind;
   });
-  score.textContent = String(maze.score);
+  caught.textContent = String(maze.caught);
   lives.textContent = String(maze.lives);
   level.textContent = String(maze.level);
   circle.textContent = String(maze.circle);
-  const message = maze.notice ?? (maze.status === "lost" ? "Gay over" : "");
-  if (status.textContent !== message) status.textContent = message;
+  lost.hidden = maze.status !== "lost";
+  if (maze.status === "lost") {
+    finalCaught.textContent = String(maze.caught);
+    finalCircle.textContent = String(maze.circle);
+    finalRound.textContent = String(maze.level);
+  }
 }
 
-document.querySelector("#restart")!.addEventListener("click", () => {
-  maze = createMaze();
-  render();
-  field.focus();
-  startFrames();
-});
+restart.addEventListener("click", startNewGame);
+playAgain.addEventListener("click", startNewGame);
+
+retryResult.addEventListener("click", () => void saveResult());
 
 document.addEventListener("keydown", (event) => {
   const direction = keys[event.code];
@@ -129,6 +184,7 @@ document
   });
 
 render();
+startRound();
 function frame() {
   frameTimer = null;
   if (maze.status !== "playing") return;
@@ -138,6 +194,15 @@ function frame() {
   }
   advance(maze);
   render();
+  const statusAfterAdvance = maze.status as string;
+  if (statusAfterAdvance === "lost") {
+    pendingResult = {
+      caught: maze.caught,
+      circle: maze.circle,
+      round: maze.level,
+    };
+    void saveResult();
+  }
   if (maze.status === "playing") scheduleFrame(stepMsForCircle(maze.circle));
 }
 startFrames();

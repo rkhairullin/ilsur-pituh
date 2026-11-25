@@ -5,6 +5,7 @@ class Element extends EventTarget {
   children: Element[] = [];
   dataset: Record<string, string> = {};
   textContent = "";
+  hidden = false;
   focus = vi.fn();
   setAttribute = vi.fn();
   setPointerCapture = vi.fn();
@@ -39,6 +40,9 @@ test("renders play, pointer input and a fresh round", async () => {
   const level = new Element();
   const circle = new Element();
   const status = new Element();
+  const lost = new Element();
+  lost.hidden = true;
+  const retry = new Button();
   const restart = new Button();
   const right = new Button();
   const screen = { innerWidth: 375, innerHeight: 667, setTimeout };
@@ -47,12 +51,19 @@ test("renders play, pointer input and a fresh round", async () => {
   down.dataset.direction = "down";
   const elements = new Map([
     ["#field", field],
-    ["#score", score],
+    ["#caught", score],
     ["#lives", lives],
     ["#level", level],
     ["#circle", circle],
     ["#status", status],
+    ["#lost", lost],
+    ["#final-caught", new Element()],
+    ["#final-circle", new Element()],
+    ["#final-round", new Element()],
+    ["#result-status", new Element()],
+    ["#retry-result", retry],
     ["#restart", restart],
+    ["#play-again", new Button()],
   ]);
   const document = Object.assign(new EventTarget(), {
     querySelector: (selector: string) => elements.get(selector),
@@ -68,6 +79,8 @@ test("renders play, pointer input and a fresh round", async () => {
   );
   vi.stubGlobal("HTMLButtonElement", Button);
   vi.stubGlobal("HTMLAnchorElement", Anchor);
+  vi.stubGlobal("crypto", { randomUUID: vi.fn(() => "round-id") });
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
   await import("../../client/games/packman/main.js");
 
   const player = () =>
@@ -152,7 +165,7 @@ test("renders play, pointer input and a fresh round", async () => {
   create.mockRestore();
   key("ArrowRight");
   vi.advanceTimersByTime(280);
-  expect(status.textContent).toBe("Карта пройдена!");
+  expect(lost.hidden).toBe(true);
   vi.advanceTimersByTime(560);
   expect(player()).toBe(engine.index({ x: 1, y: 1 }));
   expect(
@@ -167,19 +180,34 @@ test("restart after defeat starts a fresh game loop", async () => {
   lostMaze.status = "lost";
   lostMaze.phase = "rest";
   const status = new Element();
+  const lost = new Element();
+  lost.hidden = true;
+  const finalCaught = new Element();
+  const finalCircle = new Element();
+  const finalRound = new Element();
+  const retryResult = new Button();
   const field = new Element();
   const restart = new Button();
-  const freshMaze = engine.createMaze();
+  const playAgain = new Button();
+  lostMaze.caught = 17;
+  lostMaze.circle = 4;
+  lostMaze.level = 6;
   const elements = new Map([
     ["#field", field],
-    ["#score", new Element()],
+    ["#caught", new Element()],
     ["#lives", new Element()],
     ["#level", new Element()],
     ["#circle", new Element()],
-    ["#phase", new Element()],
-    ["#status", status],
+    ["#lost", lost],
+    ["#final-caught", finalCaught],
+    ["#final-circle", finalCircle],
+    ["#final-round", finalRound],
+    ["#result-status", status],
+    ["#retry-result", retryResult],
     ["#restart", restart],
+    ["#play-again", playAgain],
   ]);
+  const freshMaze = engine.createMaze();
   const document = Object.assign(new EventTarget(), {
     querySelector: (selector: string) => elements.get(selector),
     querySelectorAll: () => [],
@@ -190,6 +218,16 @@ test("restart after defeat starts a fresh game loop", async () => {
   vi.stubGlobal("matchMedia", () => ({ matches: false }));
   vi.stubGlobal("HTMLButtonElement", Button);
   vi.stubGlobal("HTMLAnchorElement", Anchor);
+  vi.stubGlobal("crypto", { randomUUID: vi.fn(() => "round-id") });
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce({ ok: true })
+    .mockResolvedValueOnce({ ok: false })
+    .mockResolvedValueOnce({ ok: true })
+    .mockRejectedValueOnce(new Error("offline"))
+    .mockResolvedValueOnce({ ok: true })
+    .mockResolvedValueOnce({ ok: true });
+  vi.stubGlobal("fetch", fetch);
   const createMaze = vi
     .fn()
     .mockReturnValueOnce(lostMaze)
@@ -201,11 +239,14 @@ test("restart after defeat starts a fresh game loop", async () => {
     createMaze,
   }));
   await import("../../client/games/packman/main.js");
-  expect(status.textContent).toBe("Gay over");
+  expect(lost.hidden).toBe(false);
+  expect(finalCaught.textContent).toBe("17");
+  expect(finalCircle.textContent).toBe("4");
+  expect(finalRound.textContent).toBe("6");
   vi.advanceTimersByTime(280);
   expect(vi.getTimerCount()).toBe(0);
-  dispatch(restart, "click");
-  expect(status.textContent).toBe("");
+  dispatch(playAgain, "click");
+  expect(lost.hidden).toBe(true);
   const event = new Event("keydown", { cancelable: true });
   Object.defineProperties(event, {
     code: { value: "ArrowRight" },
@@ -228,8 +269,18 @@ test("restart after defeat starts a fresh game loop", async () => {
   });
   document.dispatchEvent(losingEvent);
   vi.advanceTimersByTime(280);
-  expect(status.textContent).toBe("Gay over");
+  expect(lost.hidden).toBe(false);
   expect(vi.getTimerCount()).toBe(0);
+  await vi.waitFor(() => {
+    expect(status.textContent).toBe(
+      "Результат не подтверждён. Повтори сохранение.",
+    );
+    expect(retryResult.hidden).toBe(false);
+  });
+  const resultRequest = JSON.parse(fetch.mock.calls[3]![1]!.body as string);
+  expect(resultRequest).toEqual({ caught: 1, circle: 1, round: 1 });
+  dispatch(retryResult, "click");
+  await vi.waitFor(() => expect(status.textContent).toBe("Результат сохранён"));
 });
 
 test("renders four distinct enemy heads on the final map", async () => {
@@ -261,13 +312,20 @@ test("renders four distinct enemy heads on the final map", async () => {
   ];
   const elements = new Map([
     ["#field", field],
-    ["#score", new Element()],
+    ["#caught", new Element()],
     ["#lives", new Element()],
     ["#level", new Element()],
     ["#circle", new Element()],
     ["#phase", new Element()],
     ["#status", new Element()],
+    ["#lost", new Element()],
+    ["#final-caught", new Element()],
+    ["#final-circle", new Element()],
+    ["#final-round", new Element()],
+    ["#result-status", new Element()],
+    ["#retry-result", new Button()],
     ["#restart", new Button()],
+    ["#play-again", new Button()],
   ]);
   const document = Object.assign(new EventTarget(), {
     querySelector: (selector: string) => elements.get(selector),
@@ -279,6 +337,8 @@ test("renders four distinct enemy heads on the final map", async () => {
   vi.stubGlobal("matchMedia", () => ({ matches: false }));
   vi.stubGlobal("HTMLButtonElement", Button);
   vi.stubGlobal("HTMLAnchorElement", Anchor);
+  vi.stubGlobal("crypto", { randomUUID: vi.fn(() => "round-id") });
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
   vi.doMock("../../client/games/packman/maze.js", async () => ({
     ...(await vi.importActual<typeof engine>(
       "../../client/games/packman/maze.js",
