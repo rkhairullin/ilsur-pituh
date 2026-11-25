@@ -89,14 +89,15 @@ for (const viewport of [
         document.documentElement.clientWidth,
       ]),
     ).toEqual([viewport.width, viewport.width]);
-    await expect(page).toHaveScreenshot(
-      `catalog-${viewport.width}x${viewport.height}.png`,
-    );
     await page
       .getByRole("heading", { name: "Ильсур-Пакман-Членоед" })
       .scrollIntoViewIfNeeded();
     await expect(page).toHaveScreenshot(
       `catalog-second-game-${viewport.width}x${viewport.height}.png`,
+    );
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(page).toHaveScreenshot(
+      `catalog-${viewport.width}x${viewport.height}.png`,
     );
   });
 }
