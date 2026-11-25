@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { games, renderCatalog, renderRating } from "../../server/catalog.js";
 
-test("renders the closed expandable game catalog with an escaped player name", () => {
+test("renders both games in order with an escaped player name", () => {
   const page = renderCatalog(`<Игрок> & \"Рок\" 'n'`, () => []);
 
   expect(page).toContain("<h1>Ильсур - пИтух</h1>");
@@ -12,11 +12,15 @@ test("renders the closed expandable game catalog with an escaped player name", (
   expect(page).toContain(
     "<b>&lt;Игрок&gt; &amp; &quot;Рок&quot; &#39;n&#39;</b>",
   );
-  expect(page.match(/href="\/ilsur-lovit-chleny\/instructions"/g)).toHaveLength(
-    2,
-  );
+  expect(page).toContain('href="/ilsur-lovit-chleny/instructions"');
+  expect(page).toContain('href="/packman/instructions"');
   expect(page).toContain('src="/catalog/game-preview.webp"');
-  expect(page).toContain(">Начать петушить</a>");
+  expect(page).toContain('src="/catalog/packman-preview.webp"');
+  expect(page.match(/>К игре<\/a>/g)).toHaveLength(2);
+  expect(page).toContain('<p class="library-count">02 <span>ИГРЫ</span></p>');
+  expect(page.indexOf("Ильсур ловит члены")).toBeLessThan(
+    page.indexOf("Ильсур-Пакман-Членоед"),
+  );
   expect(page).toContain(
     "Диско-пушки палят членами, а у Ильсура опять руки заняты. Помоги ему поймать их ртом, держи темп и докажи, что у Ильсура глубокая глотка",
   );

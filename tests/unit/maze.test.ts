@@ -23,7 +23,7 @@ import {
   tunnelRow,
   width,
   type Direction,
-} from "../../client/games/maze/maze.js";
+} from "../../client/games/packman/maze.js";
 
 function createMaze() {
   const maze = createIdleMaze();

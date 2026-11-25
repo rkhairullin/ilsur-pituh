@@ -42,7 +42,9 @@ test("a completed round survives a network retry and appears in another browser 
       form: { nickname: "лидер теста", password: "ranking-test" },
     });
     await observer.goto("/");
-    await expect(observer.getByText("Пока нет результатов")).toBeVisible();
+    await expect(
+      observer.locator(".game-card").first().getByText("Пока нет результатов"),
+    ).toBeVisible();
 
     await page.goto(`${baseURL}/ilsur-lovit-chleny/`);
     await page.clock.fastForward(900);
@@ -59,7 +61,10 @@ test("a completed round survives a network retry and appears in another browser 
     await expect(
       observer.getByText("Лидер теста · Очков: 10 · Членов напихано: 1"),
     ).toBeVisible();
-    await observer.getByRole("link", { name: "Полный рейтинг" }).click();
+    await observer
+      .getByRole("link", { name: "Полный рейтинг" })
+      .first()
+      .click();
     await expect(
       observer.getByText("🥇 Лидер теста · Очков: 10 · Членов напихано: 1"),
     ).toBeVisible();
@@ -97,7 +102,9 @@ test("@visual empty ranking on desktop and mobile", async ({ page }) => {
   ]) {
     await page.setViewportSize(viewport);
     await page.goto("/ilsur-lovit-chleny/rating");
-    await expect(page.getByText("Пока нет результатов")).toBeVisible();
+    await expect(
+      page.locator("section").getByText("Пока нет результатов"),
+    ).toBeVisible();
     await expect(page.getByText("У тебя пока нет результата")).toBeVisible();
     await expect
       .soft(page)

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { index, levelInfo } from "../../client/games/maze/maze.js";
+import { index, levelInfo } from "../../client/games/packman/maze.js";
 
 async function openMaze(page: Page) {
   await page.clock.install();
@@ -7,12 +7,12 @@ async function openMaze(page: Page) {
   await page.request.post("/login", {
     form: { nickname: "Игрок лабиринта", password: "browser-test-password" },
   });
-  await page.goto("/maze/");
+  await page.goto("/packman/");
 }
 
 test("protects the prototype with the shared login", async ({ page }) => {
-  await page.goto("/maze/");
-  await expect(page).toHaveURL(/\/login\?returnTo=%2Fmaze%2F$/);
+  await page.goto("/packman/");
+  await expect(page).toHaveURL(/\/login\?returnTo=%2Fpackman%2F$/);
   await openMaze(page);
   await expect(
     page.getByRole("heading", { name: "Ильсур-Пакман-Членоед" }),

@@ -31,7 +31,7 @@ for (const viewport of [
       page.getByText("У Ильсура есть право сказать «нет».", { exact: false }),
     ).toBeAttached();
 
-    const start = page.getByRole("link", { name: "Начать напихивать" });
+    const start = page.getByRole("link", { name: "Начать пИтушить" });
     await expect(start).toBeInViewport({ ratio: 1 });
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
@@ -96,7 +96,7 @@ test("touch starts the game after scrolling the instructions on a phone", async 
       form: { nickname: "Игрок", password: "browser-test-password" },
     });
     await page.goto(path);
-    const start = page.getByRole("link", { name: "Начать напихивать" });
+    const start = page.getByRole("link", { name: "Начать пИтушить" });
     await expect(start).toBeInViewport({ ratio: 1 });
     const beforeScroll = await start.boundingBox();
     const instructions = page.getByRole("main");
