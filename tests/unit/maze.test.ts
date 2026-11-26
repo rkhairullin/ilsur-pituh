@@ -303,8 +303,7 @@ describe("seven-map maze", () => {
     expect(maze.golden).toBeNull();
     expect(maze.goldenMovesTaken).toBe(0);
     expect(maze.goldenTicksLeft).toBe(goldenTicks);
-    expect(maze.lives).toBe(5);
-    expect(maze.goldenFruitProgress).toBe(1);
+    expect(maze.lives).toBe(6);
     advance(maze);
     expect(maze.goldenTicksLeft).toBe(goldenTicks - 1);
     maze.paused = true;
@@ -371,46 +370,27 @@ describe("seven-map maze", () => {
     expect(maze.goldenMovesTaken).toBe(0);
   });
 
-  it.each([
-    [3, 4],
-    [5, 6],
-  ])(
-    "adds a life on the third golden fruit (%i becomes %i)",
-    (lives, expectedLives) => {
-      const maze = createMaze();
-      maze.lives = lives;
-      maze.goldenFruitProgress = 2;
-      maze.golden = index({ x: 2, y: 1 });
-      maze.items = new Set([index({ x: 2, y: 1 }), index({ x: 3, y: 1 })]);
-
-      requestTurn(maze, "right", -1);
-      advance(maze);
-
-      expect(maze.lives).toBe(expectedLives);
-      expect(maze.goldenFruitProgress).toBe(0);
-    },
-  );
-
-  it("keeps golden-fruit progress across map changes and lost lives", () => {
+  it("awards one extra life for every golden fruit", () => {
     const maze = createMaze();
-    maze.goldenFruitProgress = 2;
-    maze.items = new Set([index({ x: 2, y: 1 })]);
+    maze.lives = 3;
+    maze.golden = index({ x: 2, y: 1 });
+    maze.items = new Set([
+      index({ x: 2, y: 1 }),
+      index({ x: 3, y: 1 }),
+      index({ x: 4, y: 1 }),
+    ]);
     requestTurn(maze, "right", -1);
     advance(maze);
-    expect(maze.level).toBe(2);
-    expect(maze.goldenFruitProgress).toBe(2);
-
-    maze.graceTicksLeft = 0;
-    maze.player = { position: { x: 2, y: 1 }, direction: "up" };
-    maze.enemies = [
-      { position: { x: 2, y: 1 }, direction: "left", kind: "pursuer" },
-    ];
-    advance(maze);
     expect(maze.lives).toBe(4);
-    expect(maze.goldenFruitProgress).toBe(2);
+
+    maze.golden = index({ x: 3, y: 1 });
+    maze.items = new Set([index({ x: 3, y: 1 }), index({ x: 4, y: 1 })]);
+    requestTurn(maze, "right", -1);
+    advance(maze);
+    expect(maze.lives).toBe(5);
   });
 
-  it("removes one life on collision, preserves progress, then ends after the last life", () => {
+  it("removes one life on collision, then ends after the last life", () => {
     const maze = createMaze();
     maze.items.delete(index({ x: 2, y: 1 }));
     maze.score = 70;

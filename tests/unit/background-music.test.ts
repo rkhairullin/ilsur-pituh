@@ -2,16 +2,25 @@ import { afterEach, expect, test, vi } from "vitest";
 import { BackgroundMusic } from "../../client/shared/music/player.js";
 import { orderMusicTracks } from "../../client/shared/music/playlist.js";
 
+class AudioMock extends EventTarget {
+  volume = 1;
+  preload = "";
+  currentTime = 0;
+  play = vi.fn(async () => {});
+  pause = vi.fn();
+  load = vi.fn();
+
+  constructor(public src: string) {
+    super();
+  }
+}
+
 function setup(tracks: string[]) {
-  const audio = Object.assign(new EventTarget(), {
-    src: "",
-    volume: 1,
-    play: vi.fn(async () => {}),
-    pause: vi.fn(),
-  });
+  const audio: AudioMock[] = [];
   const createAudio = vi.fn(function (src: string) {
-    audio.src = src;
-    return audio;
+    const instance = new AudioMock(src);
+    audio.push(instance);
+    return instance;
   });
   vi.stubGlobal("Audio", createAudio);
   return { audio, createAudio, music: new BackgroundMusic(tracks) };
@@ -19,29 +28,35 @@ function setup(tracks: string[]) {
 
 afterEach(() => vi.unstubAllGlobals());
 
-test("orders tracks by name, starts with the first, and wraps after the last", () => {
+test("preloads the next track and switches immediately through the playlist", () => {
   const tracks = orderMusicTracks({ "02.mp3": "/second", "01.mp3": "/first" });
-  const { music, audio, createAudio } = setup(tracks);
+  const { music, audio, createAudio } = setup([...tracks, "/third"]);
   expect(createAudio).not.toHaveBeenCalled();
   music.start();
-  expect(audio.src).toBe("/first");
-  expect(audio.volume).toBe(0.5);
-  expect(audio.play).toHaveBeenCalledTimes(1);
-  audio.dispatchEvent(new Event("ended"));
-  expect(audio.src).toBe("/second");
-  expect(audio.volume).toBe(0.5);
+  expect(audio[0]!.src).toBe("/first");
+  expect(audio[0]!.volume).toBe(0.5);
+  expect(audio[0]!.play).toHaveBeenCalledTimes(1);
+  expect(audio[1]!.src).toBe("/second");
+  expect(audio[1]!.preload).toBe("auto");
+  expect(audio[1]!.load).toHaveBeenCalledOnce();
+  expect(audio[1]!.play).not.toHaveBeenCalled();
+
+  audio[0]!.dispatchEvent(new Event("ended"));
+  expect(audio[0]!.src).toBe("/second");
+  expect(audio[0]!.play).toHaveBeenCalledTimes(2);
+  expect(audio[2]!.src).toBe("/third");
+  expect(audio[2]!.load).toHaveBeenCalledOnce();
+
   music.pause();
-  expect(audio.pause).toHaveBeenCalledTimes(1);
-  audio.dispatchEvent(new Event("ended"));
-  expect(audio.src).toBe("/first");
-  expect(audio.play).toHaveBeenCalledTimes(2);
+  expect(audio[0]!.pause).toHaveBeenCalledOnce();
+  audio[0]!.dispatchEvent(new Event("ended"));
+  expect(audio[0]!.src).toBe("/third");
+  expect(audio[0]!.play).toHaveBeenCalledTimes(2);
   music.start();
-  expect(audio.src).toBe("/first");
-  expect(audio.play).toHaveBeenCalledTimes(3);
-  expect(createAudio).toHaveBeenCalledTimes(1);
-  audio.dispatchEvent(new Event("ended"));
-  expect(audio.src).toBe("/second");
-  expect(audio.play).toHaveBeenCalledTimes(4);
+  expect(audio[0]!.play).toHaveBeenCalledTimes(3);
+  audio[0]!.dispatchEvent(new Event("ended"));
+  expect(audio[0]!.src).toBe("/first");
+  expect(audio[0]!.play).toHaveBeenCalledTimes(4);
 });
 
 test("an empty playlist is silent and a rejected play can be retried", async () => {
@@ -51,11 +66,21 @@ test("an empty playlist is silent and a rejected play can be retried", async () 
   expect(empty.createAudio).not.toHaveBeenCalled();
 
   const { music, audio } = setup(["/first"]);
-  audio.play.mockRejectedValueOnce(new Error("Playback blocked"));
+  music.start();
+  audio[0]!.play.mockRejectedValueOnce(new Error("Playback blocked"));
+  music.pause();
   music.start();
   await Promise.resolve();
   music.start();
-  expect(audio.play).toHaveBeenCalledTimes(2);
-  audio.dispatchEvent(new Event("ended"));
-  expect(audio.src).toBe("/first");
+  expect(audio[0]!.play).toHaveBeenCalledTimes(3);
+  audio[0]!.dispatchEvent(new Event("ended"));
+  expect(audio[0]!.currentTime).toBe(0);
+  expect(audio[0]!.play).toHaveBeenCalledTimes(4);
+  music.pause();
+  audio[0]!.currentTime = 1;
+  audio[0]!.dispatchEvent(new Event("ended"));
+  expect(audio[0]!.currentTime).toBe(0);
+  expect(audio[0]!.play).toHaveBeenCalledTimes(4);
+  music.start();
+  expect(audio[0]!.play).toHaveBeenCalledTimes(5);
 });

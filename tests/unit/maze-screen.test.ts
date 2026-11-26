@@ -322,6 +322,7 @@ test("restart after defeat starts a fresh game loop", async () => {
   expect(resultRequest).toEqual({ caught: 1, circle: 1, round: 1 });
   dispatch(retryResult, "click");
   await vi.waitFor(() => expect(status.textContent).toBe("Результат сохранён"));
+  expect(retryResult.hidden).toBe(true);
 });
 
 test("renders four distinct enemy heads on the final map", async () => {

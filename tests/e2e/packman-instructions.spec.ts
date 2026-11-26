@@ -31,7 +31,7 @@ for (const viewport of [
     }
     await expect(page.locator(".items dt").nth(1)).toContainText("Дилдо");
     await expect(
-      page.getByText("Каждые 3 дилдо пополняют запас жизней."),
+      page.getByText("Каждое пойманное Дилдо даёт дополнительную жизнь."),
     ).toBeVisible();
     await expect(
       page.getByText("стрелки или WASD", { exact: false }),
@@ -97,6 +97,7 @@ test("Packman instructions match portrait play and game rules", async ({
   const copy = (await page.locator(".rules").innerText()).replace(/\s+/g, " ");
   expect(copy).toContain("держи экран вертикально");
   expect(copy).toContain("Ильсур и Синий засадник");
+  expect(copy).toContain("Каждое пойманное Дилдо даёт дополнительную жизнь.");
   expect(copy).toContain(
     "единственный из преследователей умеет проскальзывать сквозь туннели",
   );
@@ -104,7 +105,7 @@ test("Packman instructions match portrait play and game rules", async ({
   expect(copy).toContain("обычным членом (+1 очко)");
   expect(copy).toContain("даёт 20 очков");
   expect(copy).toContain("отступают на 18 игровых тиков");
-  expect(copy).toContain("Каждые 3 дилдо пополняют запас жизней.");
+  expect(copy).toContain("Каждое пойманное Дилдо даёт дополнительную жизнь.");
   expect(copy).toContain("круг даёт 500 бонусных очков");
 
   const rotations = await page.locator(".items img").evaluateAll((images) =>
