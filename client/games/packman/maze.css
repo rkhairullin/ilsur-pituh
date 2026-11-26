@@ -111,7 +111,7 @@ button {
   width: 100%;
   height: 100%;
   background-image: url("./assets/item-banana.webp");
-  transform: rotate(225deg);
+  transform: rotate(225deg) scale(0.5);
 }
 .tile[data-tile="golden"]::after {
   width: 94%;
@@ -255,15 +255,15 @@ button {
   .controls {
     display: grid;
     justify-self: center;
-    grid-template-columns: repeat(3, 60px);
-    grid-template-rows: 44px 44px 60px;
+    grid-template-columns: repeat(3, 72px);
+    grid-template-rows: 40px 40px 68px;
     column-gap: 16px;
     touch-action: none;
     user-select: none;
   }
   .controls button {
-    width: 60px;
-    height: 60px;
+    width: 72px;
+    height: 72px;
     padding: 0;
     font-size: 1.35rem;
   }
