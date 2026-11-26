@@ -21,6 +21,23 @@
         <div class="header-actions">
           <a href="/">Каталог</a>
           <button type="button" id="restart">Начать заново</button>
+          <button
+            type="button"
+            id="sound"
+            class="sound-toggle"
+            aria-label="Выключить звук"
+            aria-pressed="true"
+            title="Выключить звук"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 10v4h4l5 4V6l-5 4H4Z" />
+              <path
+                class="sound-wave"
+                d="M16 9a5 5 0 0 1 0 6m2-9a9 9 0 0 1 0 12"
+              />
+              <path class="sound-slash" d="m4 4 16 16" />
+            </svg>
+          </button>
         </div>
       </header>
       <section class="play" aria-label="Лабиринт">

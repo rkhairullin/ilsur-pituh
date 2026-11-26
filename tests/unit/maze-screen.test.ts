@@ -1,5 +1,12 @@
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import * as engine from "../../client/games/packman/maze.js";
+
+vi.mock("../../client/shared/music/player.js", () => ({
+  BackgroundMusic: class {
+    start() {}
+    pause() {}
+  },
+}));
 
 class Element extends EventTarget {
   children: Element[] = [];
@@ -17,6 +24,21 @@ class Element extends EventTarget {
 
 class Button extends Element {}
 class Anchor extends Element {}
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "Audio",
+    class {
+      currentTime = 0;
+      preload = "";
+      addEventListener() {}
+      play() {
+        return Promise.resolve();
+      }
+      pause() {}
+    },
+  );
+});
 
 function dispatch(target: EventTarget, type: string, props = {}) {
   target.dispatchEvent(
@@ -63,6 +85,7 @@ test("renders play, pointer input and a fresh round", async () => {
     ["#result-status", new Element()],
     ["#retry-result", retry],
     ["#restart", restart],
+    ["#sound", new Button()],
     ["#play-again", new Button()],
   ]);
   const document = Object.assign(new EventTarget(), {
@@ -222,6 +245,7 @@ test("restart after defeat starts a fresh game loop", async () => {
     ["#result-status", status],
     ["#retry-result", retryResult],
     ["#restart", restart],
+    ["#sound", new Button()],
     ["#play-again", playAgain],
   ]);
   const freshMaze = engine.createMaze();
@@ -342,6 +366,7 @@ test("renders four distinct enemy heads on the final map", async () => {
     ["#result-status", new Element()],
     ["#retry-result", new Button()],
     ["#restart", new Button()],
+    ["#sound", new Button()],
     ["#play-again", new Button()],
   ]);
   const document = Object.assign(new EventTarget(), {

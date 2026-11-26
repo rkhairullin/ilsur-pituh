@@ -44,6 +44,83 @@ test("starts the game when crypto.randomUUID is unavailable", async ({
   await expect(page.locator("#caught")).toHaveText("1");
 });
 
+test("plays the golden catch sound when the golden item is collected", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const played: string[] = [];
+    Object.defineProperty(window, "__playedAudio", { value: played });
+    HTMLMediaElement.prototype.play = function () {
+      played.push(this.src);
+      return Promise.resolve();
+    };
+  });
+  await openMaze(page);
+  await page.keyboard.press("ArrowDown");
+  await page.clock.runFor(560);
+  await page.keyboard.press("ArrowRight");
+  await page.clock.runFor(1680);
+  await page.keyboard.press("ArrowDown");
+  await page.clock.runFor(1680);
+  await expect(
+    page.locator("#field .tile").nth(index(levelInfo(1)!.golden)),
+  ).toHaveAttribute("data-tile", "player");
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (
+          window as unknown as Window & { __playedAudio: string[] }
+        ).__playedAudio.some((src) => src.includes("rooster_crowing")),
+      ),
+    )
+    .toBe(true);
+});
+
+test("keeps the compact sound toggle muted across restarts and page reloads @visual", async ({
+  page,
+}) => {
+  await openMaze(page);
+  const sound = page.getByRole("button", { name: "Выключить звук" });
+  const restart = page.getByRole("button", { name: "Начать заново" });
+  await expect(sound).toHaveAttribute("aria-pressed", "true");
+  const initialLayout = await page.evaluate(() => {
+    const actions = document
+      .querySelector(".header-actions")!
+      .getBoundingClientRect();
+    const restartButton = document
+      .querySelector("#restart")!
+      .getBoundingClientRect();
+    const soundButton = document
+      .querySelector("#sound")!
+      .getBoundingClientRect();
+    return {
+      rowHeight: actions.height,
+      restartHeight: restartButton.height,
+      soundHeight: soundButton.height,
+      soundWidth: soundButton.width,
+    };
+  });
+  expect(initialLayout.rowHeight).toBe(initialLayout.restartHeight);
+  expect(initialLayout.soundHeight).toBe(initialLayout.restartHeight);
+  expect(initialLayout.soundWidth).toBe(44);
+  await expect(page.locator("header .header-actions")).toHaveScreenshot(
+    "packman-header-actions.png",
+  );
+  await sound.click();
+  const muted = page.getByRole("button", { name: "Включить звук" });
+  await expect(muted).toHaveAttribute("aria-pressed", "false");
+  await expect(muted).toHaveAttribute("data-muted", "true");
+  await restart.click();
+  await expect(muted).toHaveAttribute("aria-pressed", "false");
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Включить звук" }),
+  ).toHaveAttribute("aria-pressed", "false");
+  expect(
+    await page.evaluate(() => sessionStorage.getItem("packman-sound")),
+  ).toBe("off");
+});
+
 test("supports keyboard play, buffered turn, focus and restart", async ({
   page,
 }) => {
