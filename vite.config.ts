@@ -12,6 +12,7 @@ export default defineConfig({
         "ilsur-lovit-chleny/instructions.html",
         "packman/index.html",
         "packman/instructions.html",
+        "ilsur-platformer/index.html",
       ].map((page) =>
         fileURLToPath(new URL(`./client/games/${page}`, import.meta.url)),
       ),
