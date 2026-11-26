@@ -58,20 +58,27 @@ test("a completed round survives a network retry and appears in another browser 
     await expect(page.getByText("Результат сохранён")).toBeVisible();
 
     const packmanKey = "11111111-1111-4111-8111-111111111111";
-    const packmanStatuses = await page.evaluate(async (key) => {
-      const url = `/api/games/ilsur-pacman/rounds/${key}`;
-      const start = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{}",
-      });
-      const result = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caught: 7, circle: 2, round: 4 }),
-      });
-      return [start.status, result.status];
-    }, packmanKey);
+    const originalNow = Date.now;
+    let packmanStatuses: number[];
+    try {
+      Date.now = () => Date.UTC(2026, 10, 25, 12);
+      packmanStatuses = await page.evaluate(async (key) => {
+        const url = `/api/games/ilsur-pacman/rounds/${key}`;
+        const start = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        const result = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ caught: 7, circle: 2, round: 4 }),
+        });
+        return [start.status, result.status];
+      }, packmanKey);
+    } finally {
+      Date.now = originalNow;
+    }
     expect(packmanStatuses).toEqual([204, 204]);
 
     await observer.getByRole("button", { name: "Обновить рейтинг" }).click();
