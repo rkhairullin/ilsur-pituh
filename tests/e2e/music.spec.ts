@@ -30,7 +30,17 @@ test("starts music with the round, follows the playlist, and obeys mute", async 
         document.body.append(this);
       }
 
+      override load() {
+        this.id = "music-preload-probe";
+      }
+
       override async play() {
+        if (this.id === "music-preload-probe") {
+          document
+            .querySelector("#music-probe")
+            ?.setAttribute("id", "previous-music-probe");
+          this.id = "music-probe";
+        }
         this.dataset.playing = "true";
       }
 

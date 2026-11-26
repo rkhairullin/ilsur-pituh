@@ -44,6 +44,53 @@ test("starts the game when crypto.randomUUID is unavailable", async ({
   await expect(page.locator("#caught")).toHaveText("1");
 });
 
+test("preloads the next Packman music track before the current one ends", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.Audio = class extends Audio {
+      constructor(src?: string) {
+        super(src);
+        const effect = src?.match(/\/(miss|rooster_crowing)-[^/]+\.mp3$/)?.[1];
+        this.dataset.kind = effect ? "effect" : "music";
+        if (!effect) {
+          this.id = "packman-music";
+          document.body.append(this);
+        }
+      }
+
+      override load() {
+        if (this.dataset.kind === "music") {
+          this.id = "packman-preload";
+          this.dataset.packmanPreload = "true";
+        }
+      }
+
+      override async play() {
+        this.dataset.playing = "true";
+      }
+
+      override pause() {
+        this.dataset.playing = "false";
+      }
+    };
+  });
+  await openMaze(page);
+  await page.keyboard.press("ArrowRight");
+
+  const music = page.locator("#packman-music");
+  const preload = page.locator('audio[data-packman-preload="true"]');
+  await expect(music).toHaveAttribute("data-playing", "true");
+  await expect(preload).toHaveCount(1);
+  await expect(preload).toHaveJSProperty("preload", "auto");
+  const nextTrack = await preload.getAttribute("src");
+
+  await music.dispatchEvent("ended");
+  await expect(music).toHaveAttribute("src", nextTrack!);
+  await expect(music).toHaveAttribute("data-playing", "true");
+  await expect(preload).toHaveCount(2);
+});
+
 test("plays the golden catch sound when the golden item is collected", async ({
   page,
 }) => {
@@ -65,6 +112,7 @@ test("plays the golden catch sound when the golden item is collected", async ({
   await expect(
     page.locator("#field .tile").nth(index(levelInfo(1)!.golden)),
   ).toHaveAttribute("data-tile", "player");
+  await expect(page.locator("#lives")).toHaveText("6");
   await expect
     .poll(() =>
       page.evaluate(() =>
@@ -210,6 +258,7 @@ test("shows the Gay over summary and saves progress after the last life", async 
   await expect(page.locator("#final-circle")).toHaveText(/\d+/);
   await expect(page.locator("#final-round")).toHaveText(/\d+/);
   await expect(page.locator("#result-status")).toHaveText("Результат сохранён");
+  await expect(page.locator("#retry-result")).toBeHidden();
   await expect(page.locator("#lost")).toHaveScreenshot(
     "packman-gameover-desktop.png",
   );
@@ -223,6 +272,49 @@ test("shows the Gay over summary and saves progress after the last life", async 
   await expect(page.locator("#lives")).toHaveText("5");
   await expect(page.locator("#level")).toHaveText("1");
   await expect(page.locator("#circle")).toHaveText("1");
+});
+
+test("only shows a prominent result retry after saving fails @visual", async ({
+  page,
+}) => {
+  let requests = 0;
+  await page.route("**/api/games/ilsur-pacman/rounds/*", async (route) => {
+    requests += 1;
+    await route.fulfill({ status: requests <= 2 ? 503 : 204 });
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openMaze(page);
+  const retry = page.getByRole("button", {
+    name: "Повторить сохранение результата",
+  });
+  await expect(retry).toBeHidden();
+
+  await page.keyboard.press("ArrowRight");
+  await page.clock.runFor(280);
+  await page.evaluate(() => {
+    window.setInterval(() => {
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ArrowRight", bubbles: true }),
+      );
+    }, 280);
+  });
+  for (let elapsed = 0; elapsed < 120_000; elapsed += 1_000)
+    await page.clock.runFor(1_000);
+
+  await expect(page.locator("#result-status")).toHaveText(
+    "Результат не подтверждён. Повтори сохранение.",
+  );
+  await expect(retry).toBeVisible();
+  await expect(retry).toHaveCSS("min-height", "52px");
+  await expect(retry).toHaveCSS("background-color", "rgb(255, 228, 123)");
+  await expect(page.locator("#lost")).toHaveScreenshot(
+    "packman-save-retry-mobile.png",
+  );
+
+  await retry.click();
+  await expect(page.locator("#result-status")).toHaveText("Результат сохранён");
+  await expect(retry).toBeHidden();
+  expect(requests).toBe(4);
 });
 
 test("renders a readable desktop map @visual", async ({ page }) => {

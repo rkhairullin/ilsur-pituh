@@ -209,7 +209,6 @@ type Maze = {
   circle: number;
   goldenTicksLeft: number;
   goldenMovesTaken: number;
-  goldenFruitProgress: number;
   graceTicksLeft: number;
 };
 
@@ -284,7 +283,6 @@ export function createMaze(): Maze {
     circle: 1,
     goldenTicksLeft: 0,
     goldenMovesTaken: 0,
-    goldenFruitProgress: 0,
     graceTicksLeft: 0,
   };
 }
@@ -445,11 +443,7 @@ function collect(maze: Maze) {
     maze.goldenTicksLeft = goldenTicks;
     maze.score += goldenScore;
     maze.caught += 1;
-    maze.goldenFruitProgress += 1;
-    if (maze.goldenFruitProgress >= 3) {
-      maze.goldenFruitProgress -= 3;
-      maze.lives += 1;
-    }
+    maze.lives += 1;
   } else if (maze.items.delete(playerIndex)) {
     maze.score += fruitScore;
     maze.caught += 1;

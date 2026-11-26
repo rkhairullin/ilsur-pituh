@@ -69,9 +69,9 @@
         <p>
           Круг: <b id="final-circle">1</b> · Раунд: <b id="final-round">1</b>
         </p>
-        <p id="result-status" aria-live="polite"></p>
-        <button id="retry-result" type="button" hidden>
-          Повторить сохранение
+        <p id="result-status" role="alert" aria-live="assertive"></p>
+        <button id="retry-result" class="retry-result" type="button" hidden>
+          <span aria-hidden="true">↻</span> Повторить сохранение результата
         </button>
         <div class="header-actions result-actions">
           <a href="./rating">Рейтинг игры</a>
