@@ -10,6 +10,11 @@ import {
   width,
   type Direction,
 } from "./maze.js";
+import missEffect from "../ilsur-lovit-chleny/assets/sounds/miss.mp3?url";
+import goldenEffect from "../ilsur-lovit-chleny/assets/sounds/rooster_crowing.mp3?url";
+import { BackgroundMusic } from "../../shared/music/player.js";
+import { musicTracks } from "../../shared/music/playlist.js";
+import { PackmanSound, playMazeChange } from "./sound.js";
 
 const field = document.querySelector<HTMLElement>("#field")!;
 const caught = document.querySelector<HTMLElement>("#caught")!;
@@ -23,7 +28,12 @@ const finalRound = document.querySelector<HTMLElement>("#final-round")!;
 const resultStatus = document.querySelector<HTMLElement>("#result-status")!;
 const retryResult = document.querySelector<HTMLButtonElement>("#retry-result")!;
 const restart = document.querySelector<HTMLButtonElement>("#restart")!;
+const soundButton = document.querySelector<HTMLButtonElement>("#sound")!;
 const playAgain = document.querySelector<HTMLButtonElement>("#play-again")!;
+const sound = new PackmanSound(soundButton, new BackgroundMusic(musicTracks), {
+  miss: missEffect,
+  golden: goldenEffect,
+});
 const coarseTouch = matchMedia("(any-pointer: coarse)");
 const keys: Partial<Record<string, Direction>> = {
   ArrowUp: "up",
@@ -47,6 +57,7 @@ const tiles = Array.from({ length: width * height }, (_, offset) => {
 
 let maze = createMaze();
 let frameTimer: number | null = null;
+let orientationPaused = false;
 let currentRound: { key: string; started: Promise<boolean> };
 let pendingResult: { caught: number; circle: number; round: number };
 
@@ -97,6 +108,7 @@ async function saveResult() {
 
 function startNewGame() {
   maze = createMaze();
+  sound.startMusic();
   startRound();
   resultStatus.textContent = "";
   retryResult.hidden = true;
@@ -174,6 +186,7 @@ document.addEventListener("keydown", (event) => {
   )
     return;
   event.preventDefault();
+  sound.startMusic();
   turnOnScreen(direction, -1);
 });
 
@@ -183,6 +196,7 @@ document
     const direction = button.dataset.direction as Direction;
     button.addEventListener("pointerdown", (event) => {
       event.preventDefault();
+      sound.startMusic();
       button.setPointerCapture(event.pointerId);
       turnOnScreen(direction, event.pointerId);
     });
@@ -190,7 +204,10 @@ document
       cancelTurn(maze, event.pointerId),
     );
     button.addEventListener("click", (event) => {
-      if (event.detail === 0) turnOnScreen(direction, -1);
+      if (event.detail === 0) {
+        sound.startMusic();
+        turnOnScreen(direction, -1);
+      }
     });
   });
 
@@ -200,13 +217,26 @@ function frame() {
   frameTimer = null;
   if (maze.status !== "playing") return;
   if (coarseTouch.matches && window.innerWidth > window.innerHeight) {
+    if (!orientationPaused) sound.pauseMusic();
+    orientationPaused = true;
     scheduleFrame(250);
     return;
   }
+  if (orientationPaused) {
+    sound.resumeMusic();
+    orientationPaused = false;
+  }
+  const soundStateBeforeAdvance = {
+    caught: maze.caught,
+    score: maze.score,
+    lives: maze.lives,
+  };
   advance(maze);
+  playMazeChange(sound, soundStateBeforeAdvance, maze);
   render();
   const statusAfterAdvance = maze.status as string;
   if (statusAfterAdvance === "lost") {
+    sound.stopMusic();
     pendingResult = {
       caught: maze.caught,
       circle: maze.circle,
