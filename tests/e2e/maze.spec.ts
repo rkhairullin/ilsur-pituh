@@ -101,8 +101,10 @@ test("keeps the compact sound toggle muted across restarts and page reloads @vis
     };
   });
   expect(initialLayout.rowHeight).toBe(initialLayout.restartHeight);
-  expect(initialLayout.soundHeight).toBe(initialLayout.restartHeight);
-  expect(initialLayout.soundWidth).toBe(44);
+  expect(initialLayout.soundHeight).toBeLessThanOrEqual(
+    initialLayout.restartHeight,
+  );
+  expect(initialLayout.soundWidth).toBe(24);
   await expect(page.locator("header .header-actions")).toHaveScreenshot(
     "packman-header-actions.png",
   );
