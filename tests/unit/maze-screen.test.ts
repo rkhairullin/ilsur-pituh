@@ -79,8 +79,19 @@ test("renders play, pointer input and a fresh round", async () => {
   );
   vi.stubGlobal("HTMLButtonElement", Button);
   vi.stubGlobal("HTMLAnchorElement", Anchor);
-  vi.stubGlobal("crypto", { randomUUID: vi.fn(() => "round-id") });
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
+  const cryptoMock: {
+    randomUUID: (() => string) | undefined;
+    getRandomValues: (bytes: Uint8Array) => Uint8Array;
+  } = {
+    randomUUID: vi.fn(() => "round-id"),
+    getRandomValues: vi.fn((bytes: Uint8Array) => {
+      bytes.set(Array.from({ length: bytes.length }, (_, index) => index));
+      return bytes;
+    }),
+  };
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+  vi.stubGlobal("crypto", cryptoMock);
+  vi.stubGlobal("fetch", fetchMock);
   await import("../../client/games/packman/main.js");
 
   const player = () =>
@@ -141,7 +152,13 @@ test("renders play, pointer input and a fresh round", async () => {
   vi.advanceTimersByTime(840);
   expect(player()).toBe(engine.index({ x: 4, y: 2 }));
 
+  cryptoMock.randomUUID = undefined;
   dispatch(restart, "click");
+  expect(cryptoMock.getRandomValues).toHaveBeenCalledOnce();
+  expect(fetchMock.mock.calls.at(-1)?.[0]).toBe(
+    "/api/games/ilsur-pacman/rounds/00010203-0405-4607-8809-0a0b0c0d0e0f",
+  );
+  cryptoMock.randomUUID = () => "round-id";
   expect(field.focus).toHaveBeenCalled();
   expect(score.textContent).toBe("0");
   expect(player()).toBe(engine.index({ x: 1, y: 1 }));

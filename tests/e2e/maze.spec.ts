@@ -26,6 +26,24 @@ test("protects the prototype with the shared login", async ({ page }) => {
   ).toHaveAttribute("data-tile", "golden");
 });
 
+test("starts the game when crypto.randomUUID is unavailable", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(Crypto.prototype, "randomUUID", {
+      configurable: true,
+      value: undefined,
+    });
+  });
+  await openMaze(page);
+  await expect(
+    page.getByRole("heading", { name: "Ильсур-Пакман-Членоед" }),
+  ).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await page.clock.runFor(280);
+  await expect(page.locator("#caught")).toHaveText("1");
+});
+
 test("supports keyboard play, buffered turn, focus and restart", async ({
   page,
 }) => {
@@ -172,6 +190,20 @@ test("renders a readable desktop map @visual", async ({ page }) => {
 test.describe("touch layout", () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
 
+  test("moves on a touch direction tap", async ({ page }) => {
+    await openMaze(page);
+    await page.getByRole("button", { name: "Вниз" }).tap();
+    await page.clock.runFor(280);
+    await expect(page.locator("#field [data-tile='player']")).toHaveAttribute(
+      "data-direction",
+      "down",
+    );
+    await expect(page.locator("#field .tile").nth(23)).toHaveAttribute(
+      "data-tile",
+      "player",
+    );
+  });
+
   test("fits a portrait phone with touch controls below the board @visual", async ({
     page,
   }) => {
@@ -206,15 +238,15 @@ test.describe("touch layout", () => {
           await expect(button).toBeInViewport({ ratio: 1 });
           const box = (await button.boundingBox())!;
           expect(box.y).toBeGreaterThanOrEqual(fieldBox.y + fieldBox.height);
-          expect(box.width).toBe(60);
-          expect(box.height).toBe(60);
+          expect(box.width).toBe(72);
+          expect(box.height).toBe(72);
           return [name, box] as const;
         }),
       ),
     );
-    expect(buttons["Вверх"]!.x - buttons["Влево"]!.x - 60).toBe(16);
-    expect(buttons["Вправо"]!.x - buttons["Вверх"]!.x - 60).toBe(16);
-    expect(buttons["Вниз"]!.y - buttons["Вверх"]!.y - 60).toBe(28);
+    expect(buttons["Вверх"]!.x - buttons["Влево"]!.x - 72).toBe(16);
+    expect(buttons["Вправо"]!.x - buttons["Вверх"]!.x - 72).toBe(16);
+    expect(buttons["Вниз"]!.y - buttons["Вверх"]!.y - 72).toBe(8);
     const rotatedBanana = async (selector: string) =>
       page
         .locator(selector)
@@ -226,19 +258,47 @@ test.describe("touch layout", () => {
           return [matrix.a, matrix.b, matrix.c, matrix.d];
         });
     const regularRotation = await rotatedBanana("#field [data-tile='item']");
+    const regularBoxSize = await page
+      .locator("#field [data-tile='item']")
+      .first()
+      .evaluate((tile) => {
+        const style = getComputedStyle(tile, "::after");
+        const box = tile.getBoundingClientRect();
+        return [
+          parseFloat(style.width) / box.width,
+          parseFloat(style.height) / box.height,
+        ];
+      });
+    expect(regularBoxSize[0]).toBeCloseTo(1);
+    expect(regularBoxSize[1]).toBeCloseTo(1);
+    expect(Math.hypot(regularRotation[0]!, regularRotation[1]!)).toBeCloseTo(
+      0.5,
+    );
     const regularSprite = await page
       .locator("#field [data-tile='item']")
       .first()
       .evaluate((tile) => getComputedStyle(tile, "::after").backgroundImage);
     expect(regularSprite).toContain("data:image/webp;base64,");
-    expect(regularRotation[0]).toBeCloseTo(-Math.SQRT1_2);
-    expect(regularRotation[1]).toBeCloseTo(-Math.SQRT1_2);
-    expect(regularRotation[2]).toBeCloseTo(Math.SQRT1_2);
-    expect(regularRotation[3]).toBeCloseTo(-Math.SQRT1_2);
+    expect(regularRotation[0]).toBeCloseTo(-Math.SQRT1_2 * 0.5);
+    expect(regularRotation[1]).toBeCloseTo(-Math.SQRT1_2 * 0.5);
+    expect(regularRotation[2]).toBeCloseTo(Math.SQRT1_2 * 0.5);
+    expect(regularRotation[3]).toBeCloseTo(-Math.SQRT1_2 * 0.5);
     const goldenRotation = await rotatedBanana("#field [data-tile='golden']");
     const goldenSprite = await page
       .locator("#field [data-tile='golden']")
       .evaluate((tile) => getComputedStyle(tile, "::after").backgroundImage);
+    const goldenSize = await page
+      .locator("#field [data-tile='golden']")
+      .evaluate((tile) => {
+        const style = getComputedStyle(tile, "::after");
+        const box = tile.getBoundingClientRect();
+        return [
+          parseFloat(style.width) / box.width,
+          parseFloat(style.height) / box.height,
+        ];
+      });
+    expect(goldenSize[0]).toBeCloseTo(0.94);
+    expect(goldenSize[1]).toBeCloseTo(0.94);
     expect(goldenSprite).toContain("data:image/webp;base64,");
     expect(goldenRotation[0]).toBeCloseTo(-1);
     expect(goldenRotation[1]).toBeCloseTo(0);
