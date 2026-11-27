@@ -1,4 +1,16 @@
 import type { GameControls } from "./input.js";
+import {
+  LEVELS,
+  activateCheckpoint,
+  advanceCampaignTime,
+  advanceLevel,
+  createCampaignState,
+  currentLevel,
+  loseLife,
+  levelDurationSeconds,
+  setPaused,
+  type CampaignState,
+} from "./campaign.js";
 
 export const VIEW_WIDTH = 960;
 export const VIEW_HEIGHT = 540;
@@ -43,6 +55,7 @@ export interface Projectile {
 }
 
 export interface GameState {
+  campaign: CampaignState;
   player: Player;
   cameraX: number;
   projectiles: Projectile[];
@@ -70,11 +83,14 @@ const PROJECTILE_HALF_WIDTH = 7;
 const PROJECTILE_HALF_HEIGHT = 4;
 const MAX_FRAME_SECONDS = 0.05;
 
-export function createGameState(): GameState {
+export function createGameState(encoreLevel = 0): GameState {
+  const campaign = createCampaignState(encoreLevel);
+  const level = currentLevel(campaign);
   return {
+    campaign,
     player: {
       x: 80,
-      y: GROUND_Y - PLAYER_STANDING_HEIGHT,
+      y: level.groundY - PLAYER_STANDING_HEIGHT,
       width: PLAYER_WIDTH,
       height: PLAYER_STANDING_HEIGHT,
       velocityX: 0,
@@ -93,12 +109,78 @@ export function createGameState(): GameState {
   };
 }
 
+function resetAtCheckpoint(state: GameState) {
+  const level = currentLevel(state.campaign);
+  const checkpoint = level.checkpoints[state.campaign.checkpointIndex]!;
+  state.player.x = checkpoint.spawnX;
+  state.player.y = level.groundY - PLAYER_STANDING_HEIGHT;
+  state.player.velocityX = 0;
+  state.player.velocityY = 0;
+  state.player.height = PLAYER_STANDING_HEIGHT;
+  state.player.facing = 1;
+  state.player.grounded = true;
+  state.player.crouched = false;
+  state.player.jumpsUsed = 0;
+  state.projectiles = [];
+  state.fireCooldown = 0;
+  state.jumpHeld = false;
+  state.cameraX = Math.min(
+    Math.max(state.player.x - VIEW_WIDTH * 0.36, 0),
+    level.worldWidth - VIEW_WIDTH,
+  );
+}
+
+export function pauseGame(state: GameState) {
+  return setPaused(state.campaign, true);
+}
+
+export function resumeGame(state: GameState) {
+  return setPaused(state.campaign, false);
+}
+
+export function restartGame(state: GameState) {
+  const fresh = createGameState(state.campaign.encoreLevel);
+  Object.assign(state, fresh);
+}
+
+export function startHarderEncore(state: GameState) {
+  if (state.campaign.status !== "complete") return false;
+  const currentLevelDefinition = currentLevel(state.campaign);
+  const currentDuration = levelDurationSeconds(
+    currentLevelDefinition,
+    state.campaign.encoreLevel,
+  );
+  const nextDuration = levelDurationSeconds(
+    currentLevelDefinition,
+    state.campaign.encoreLevel + 1,
+  );
+  if (nextDuration >= currentDuration) return false;
+  const fresh = createGameState(state.campaign.encoreLevel + 1);
+  Object.assign(state, fresh);
+  return true;
+}
+
+export function losePlayerLife(state: GameState) {
+  const lost = loseLife(state.campaign);
+  if (lost && state.campaign.status === "playing") resetAtCheckpoint(state);
+  return lost;
+}
+
 export function stepGame(
   state: GameState,
   controls: GameControls,
   deltaSeconds: number,
 ) {
+  if (state.campaign.status !== "playing") return;
+  const timerResult = advanceCampaignTime(state.campaign, deltaSeconds);
+  if (timerResult === "life-lost") {
+    resetAtCheckpoint(state);
+    return;
+  }
+  if (timerResult === "game-over") return;
+
   const delta = Math.min(Math.max(deltaSeconds, 0), MAX_FRAME_SECONDS);
+  const level = currentLevel(state.campaign);
   const player = state.player;
   const direction = Number(controls.right) - Number(controls.left);
   const canCrouch = controls.crouch && player.grounded;
@@ -125,14 +207,14 @@ export function stepGame(
   const previousBottom = player.y + player.height;
   player.x = Math.min(
     Math.max(player.x + player.velocityX * delta, 0),
-    WORLD_WIDTH - player.width,
+    level.worldWidth - player.width,
   );
   player.velocityY += GRAVITY * delta;
   player.y += player.velocityY * delta;
   player.grounded = false;
 
   if (player.velocityY >= 0) {
-    for (const platform of PLATFORMS) {
+    for (const platform of level.platforms) {
       const overlapsX =
         player.x < platform.x + platform.width &&
         player.x + player.width > platform.x;
@@ -168,7 +250,7 @@ export function stepGame(
 
     if (projectile.velocityY > 0) {
       let landingPlatform: Platform | undefined;
-      for (const platform of PLATFORMS) {
+      for (const platform of level.platforms) {
         const overlapsX =
           projectile.x + PROJECTILE_HALF_WIDTH > platform.x &&
           projectile.x - PROJECTILE_HALF_WIDTH < platform.x + platform.width;
@@ -195,10 +277,18 @@ export function stepGame(
     }
   }
   state.projectiles = state.projectiles.filter(
-    (projectile) => projectile.x >= 0 && projectile.x <= WORLD_WIDTH,
+    (projectile) => projectile.x >= 0 && projectile.x <= level.worldWidth,
   );
+
+  activateCheckpoint(state.campaign, player.x);
+  if (player.x >= level.exitX) {
+    const movedToNextLevel = advanceLevel(state.campaign);
+    if (movedToNextLevel) resetAtCheckpoint(state);
+  }
   state.cameraX = Math.min(
     Math.max(player.x - VIEW_WIDTH * 0.36, 0),
-    WORLD_WIDTH - VIEW_WIDTH,
+    level.worldWidth - VIEW_WIDTH,
   );
 }
+
+export { LEVELS };

@@ -22,10 +22,159 @@ test("direct private link requires login and opens a Canvas prototype", async ({
   await expect(page.locator("#scene")).toHaveAttribute("width", "960");
   await expect(page.locator("#scene")).toHaveAttribute("height", "540");
   await expect(page.locator("[data-action]")).toHaveCount(5);
+  await expect(page.locator("#level-name")).toHaveText("Уровень 1");
+  await expect(page.locator("#level-time")).toHaveText("01:30");
+  await expect(page.locator("#lives")).toHaveText("3");
+  await expect(page.getByRole("button", { name: "Пауза" })).toBeVisible();
 
   await page.goto("/");
   await expect(page.locator(".game-card")).toHaveCount(2);
   await expect(page.locator("main")).not.toContainText("Большое приключение");
+});
+
+test("pause and resume stop and restart the level timer", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.request.post("/login", {
+    form: {
+      nickname: "Игрок паузы",
+      password: "browser-test-password",
+    },
+  });
+  await page.goto("/ilsur-platformer/");
+  const state = page.locator("#game-state");
+  const pause = page.getByRole("button", { name: "Пауза" });
+  await expect(pause).toBeVisible();
+  await page.waitForTimeout(1100);
+  await pause.click();
+  await expect(state).toHaveAttribute("data-status", "paused");
+  const pausedTime = await state.getAttribute("data-time");
+  await page.waitForTimeout(1200);
+  await expect(state).toHaveAttribute("data-time", pausedTime!);
+  await page.getByRole("button", { name: "Вернуться на подиум" }).click();
+  await expect(state).toHaveAttribute("data-status", "playing");
+  await page.waitForTimeout(1200);
+  await expect
+    .poll(async () => Number(await state.getAttribute("data-time")))
+    .toBeLessThan(Number(pausedTime));
+});
+
+test("the resume button responds to a phone tap", async ({ browser }) => {
+  const context = await browser.newContext({
+    baseURL: test.info().project.use.baseURL as string,
+    viewport: { width: 844, height: 390 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  const page = await context.newPage();
+  await page.request.post("/login", {
+    form: {
+      nickname: "Игрок с телефона",
+      password: "browser-test-password",
+    },
+  });
+  await page.goto("/ilsur-platformer/");
+  await page.getByRole("button", { name: "Пауза" }).click();
+  const resume = page.getByRole("button", { name: "Вернуться на подиум" });
+  const bounds = await resume.boundingBox();
+  expect(bounds).not.toBeNull();
+  await page.touchscreen.tap(
+    bounds!.x + bounds!.width / 2,
+    bounds!.y + bounds!.height / 2,
+  );
+  await expect(page.locator("#game-state")).toHaveAttribute(
+    "data-status",
+    "playing",
+  );
+  await context.close();
+});
+
+test("the pause menu returns to the game catalog", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.request.post("/login", {
+    form: {
+      nickname: "Игрок каталога",
+      password: "browser-test-password",
+    },
+  });
+  await page.goto("/ilsur-platformer/");
+  await page.getByRole("button", { name: "Пауза" }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Антракт, звезда! ✨" }),
+  ).toBeVisible();
+  await expect(page).toHaveScreenshot("third-game-pause-1280x720.png");
+  await page.getByRole("link", { name: "В каталог" }).click();
+  await expect(page).toHaveURL("/");
+  await expect(page.locator(".game-card")).toHaveCount(2);
+});
+
+test("activates a checkpoint and advances to the next level at the exit", async ({
+  page,
+}) => {
+  test.setTimeout(30_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.request.post("/login", {
+    form: {
+      nickname: "Игрок кампании",
+      password: "browser-test-password",
+    },
+  });
+  await page.goto("/ilsur-platformer/");
+  const state = page.locator("#game-state");
+
+  await page.keyboard.down("ArrowRight");
+  await expect(state).toHaveAttribute("data-checkpoint", "1", {
+    timeout: 7_000,
+  });
+  await expect(page.locator("#checkpoint-name")).toHaveText("Чекпоинт 1");
+  await expect(state).toHaveAttribute("data-level", "1");
+  await expect
+    .poll(async () => Number(await state.getAttribute("data-player-x")))
+    .toBeGreaterThan(900);
+  await expect(state).toHaveAttribute("data-level", "2", { timeout: 15_000 });
+  await page.keyboard.up("ArrowRight");
+  await expect(page.locator("#level-name")).toHaveText("Уровень 2");
+  await expect(page.locator("#level-time")).toHaveText("01:30");
+  await expect(page.locator("#lives")).toHaveText("3");
+  await expect(state).toHaveAttribute("data-checkpoint", "0");
+  await page.waitForTimeout(500);
+  await expect(state).toHaveAttribute("data-grounded", "true");
+});
+
+test("the boss ending offers a harder encore and a route back to the catalog", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.request.post("/login", {
+    form: {
+      nickname: "Игрок на бис",
+      password: "browser-test-password",
+    },
+  });
+  await page.goto("/ilsur-platformer/");
+  const state = page.locator("#game-state");
+  await page.keyboard.down("ArrowRight");
+  await expect(state).toHaveAttribute("data-status", "complete", {
+    timeout: 75_000,
+  });
+  await page.keyboard.up("ArrowRight");
+
+  await expect(
+    page.getByRole("heading", { name: "Браво, королева! 🌈" }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "В каталог" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "На бис: сложнее!" }),
+  ).toBeVisible();
+  await expect(state).toHaveAttribute("data-encore", "0");
+  await expect(page).toHaveScreenshot("third-game-complete-1280x720.png");
+
+  await page.getByRole("button", { name: "На бис: сложнее!" }).click();
+  await expect(state).toHaveAttribute("data-status", "playing");
+  await expect(state).toHaveAttribute("data-encore", "1");
+  await expect(state).toHaveAttribute("data-time", "70");
+  await expect(page.locator("#level-time")).toHaveText("01:10");
 });
 
 test("mobile portrait asks the player to rotate the phone", async ({

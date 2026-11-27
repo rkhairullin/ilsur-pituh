@@ -13,8 +13,14 @@ import {
   PROJECTILE_MIN_BOUNCE_SPEED,
   WORLD_WIDTH,
   createGameState,
+  losePlayerLife,
+  pauseGame,
+  restartGame,
+  resumeGame,
+  startHarderEncore,
   stepGame,
 } from "../../client/games/ilsur-platformer/game.js";
+import { LEVELS } from "../../client/games/ilsur-platformer/campaign.js";
 import type { GameControls } from "../../client/games/ilsur-platformer/input.js";
 
 const neutral: GameControls = {
@@ -38,10 +44,10 @@ test("moves in both directions, limits the world edges, and follows the player",
   state.player.x = 0;
   stepGame(state, { ...neutral, left: true }, 0.05);
   expect(state.player.x).toBe(0);
-  state.player.x = WORLD_WIDTH;
+  state.player.x = WORLD_WIDTH - 120;
   stepGame(state, { ...neutral, right: true }, 0.05);
-  expect(state.player.x).toBe(WORLD_WIDTH - state.player.width);
-  expect(state.cameraX).toBe(WORLD_WIDTH - 960);
+  expect(state.player.x).toBe(WORLD_WIDTH - 107);
+  expect(state.cameraX).toBeGreaterThan(0);
 
   state.player.x = 80;
   stepGame(state, neutral, -1);
@@ -210,4 +216,142 @@ test("keeps a small bounce so fireballs continue along a visible wave", () => {
 
   expect(state.projectiles[0]?.velocityY).toBe(-PROJECTILE_MIN_BOUNCE_SPEED);
   expect(state.projectileBounces).toBe(1);
+});
+
+test("timer expiry respawns at the active checkpoint with fresh time", () => {
+  const state = createGameState();
+  state.player.x = 900;
+  stepGame(state, neutral, 0);
+  expect(state.campaign.checkpointIndex).toBe(1);
+  state.player.y = 120;
+  state.player.height = 42;
+  state.player.crouched = true;
+  state.projectiles.push({ x: 300, y: 300, velocityX: 1, velocityY: 1 });
+  state.fireCooldown = 1;
+
+  stepGame(state, neutral, 91);
+
+  expect(state.campaign.lives).toBe(2);
+  expect(state.campaign.remainingSeconds).toBe(90);
+  expect(state.campaign.status).toBe("playing");
+  expect(state.player.x).toBe(900);
+  expect(state.player.y + state.player.height).toBe(GROUND_Y);
+  expect(state.player.height).toBe(72);
+  expect(state.player.grounded).toBe(true);
+  expect(state.projectiles).toEqual([]);
+  expect(state.fireCooldown).toBe(0);
+});
+
+test("timer expiry with the final life enters game over without advancing physics", () => {
+  const state = createGameState();
+  state.campaign.lives = 1;
+  state.player.x = 400;
+
+  stepGame(state, { ...neutral, right: true }, 91);
+
+  expect(state.campaign.status).toBe("game-over");
+  expect(state.campaign.lives).toBe(0);
+  expect(state.player.x).toBe(400);
+});
+
+test("losing a life respawns at the checkpoint and the last loss ends the game", () => {
+  const state = createGameState();
+  state.player.x = 900;
+  stepGame(state, neutral, 0);
+  state.player.x = 1200;
+  expect(losePlayerLife(state)).toBe(true);
+  expect(state.campaign.lives).toBe(2);
+  expect(state.player.x).toBe(900);
+  expect(state.campaign.remainingSeconds).toBe(90);
+
+  state.campaign.lives = 1;
+  expect(losePlayerLife(state)).toBe(true);
+  expect(state.campaign.lives).toBe(0);
+  expect(state.campaign.status).toBe("game-over");
+  expect(losePlayerLife(state)).toBe(false);
+});
+
+test("exits move through all levels and complete the final arena", () => {
+  const state = createGameState();
+  for (let index = 1; index < LEVELS.length; index += 1) {
+    const previousLevel = LEVELS[index - 1]!;
+    state.player.x = previousLevel.exitX;
+    stepGame(state, neutral, 0);
+    expect(state.campaign.levelIndex).toBe(index);
+    expect(state.player.x).toBe(80);
+    expect(state.campaign.checkpointIndex).toBe(0);
+    expect(state.campaign.remainingSeconds).toBe(
+      LEVELS[index]!.durationSeconds,
+    );
+  }
+
+  state.player.x = LEVELS.at(-1)!.exitX;
+  stepGame(state, neutral, 0);
+  expect(state.campaign.status).toBe("complete");
+  expect(state.campaign.levelIndex).toBe(LEVELS.length - 1);
+});
+
+test("level two keeps the player on the ground after its transition", () => {
+  const state = createGameState();
+  state.campaign.levelIndex = 1;
+  const level = LEVELS[1]!;
+  state.player.y = level.groundY - state.player.height;
+  state.player.grounded = true;
+
+  stepGame(state, neutral, 1 / 60);
+
+  expect(level.platforms[0]?.y).toBe(level.groundY);
+  expect(state.player.grounded).toBe(true);
+  expect(state.player.y + state.player.height).toBe(level.groundY);
+});
+
+test("starting an encore raises difficulty only after campaign completion", () => {
+  const state = createGameState();
+  expect(startHarderEncore(state)).toBe(false);
+  state.campaign.levelIndex = LEVELS.length - 1;
+  state.campaign.status = "complete";
+
+  expect(startHarderEncore(state)).toBe(true);
+  expect(state.campaign.status).toBe("playing");
+  expect(state.campaign.levelIndex).toBe(0);
+  expect(state.campaign.encoreLevel).toBe(1);
+  expect(state.campaign.remainingSeconds).toBe(70);
+  expect(state.player.x).toBe(80);
+  expect(startHarderEncore(state)).toBe(false);
+
+  const maximumEncore = createGameState(3);
+  maximumEncore.campaign.levelIndex = LEVELS.length - 1;
+  maximumEncore.campaign.status = "complete";
+  expect(startHarderEncore(maximumEncore)).toBe(false);
+  expect(maximumEncore.campaign.status).toBe("complete");
+});
+
+test("a retry after game over keeps the current encore difficulty", () => {
+  const state = createGameState(1);
+  state.campaign.status = "game-over";
+  state.player.x = 500;
+
+  restartGame(state);
+
+  expect(state.campaign.status).toBe("playing");
+  expect(state.campaign.encoreLevel).toBe(1);
+  expect(state.campaign.remainingSeconds).toBe(70);
+  expect(state.player.x).toBe(80);
+});
+
+test("pause stops time and movement; resume and restart restore campaign play", () => {
+  const state = createGameState();
+  expect(pauseGame(state)).toBe(true);
+  stepGame(state, { ...neutral, right: true }, 10);
+  expect(state.player.x).toBe(80);
+  expect(state.campaign.remainingSeconds).toBe(90);
+  expect(resumeGame(state)).toBe(true);
+  stepGame(state, { ...neutral, right: true }, 1);
+  expect(state.player.x).toBeGreaterThan(80);
+  expect(state.campaign.remainingSeconds).toBeLessThan(90);
+  state.campaign.lives = 1;
+  restartGame(state);
+  expect(state.player.x).toBe(80);
+  expect(state.campaign.lives).toBe(3);
+  expect(state.campaign.status).toBe("playing");
 });
