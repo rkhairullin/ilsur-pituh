@@ -1,4 +1,5 @@
-import { PLATFORMS, VIEW_HEIGHT, VIEW_WIDTH, type GameState } from "./game.js";
+import { VIEW_HEIGHT, VIEW_WIDTH, type GameState } from "./game.js";
+import { currentLevel } from "./campaign.js";
 
 export function drawPlatformerScene(
   context: CanvasRenderingContext2D,
@@ -16,6 +17,7 @@ export function drawPlatformerScene(
   context.scale(scale, scale);
   context.fillStyle = "#251137";
   context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+  const level = currentLevel(state.campaign);
   context.save();
   context.translate(-state.cameraX, 0);
 
@@ -24,12 +26,23 @@ export function drawPlatformerScene(
     context.fillRect(x, 92, 190, 76);
   }
 
-  for (const platform of PLATFORMS) {
+  for (const platform of level.platforms) {
     context.fillStyle = platform.y === 480 ? "#682a65" : "#62d9dc";
     context.fillRect(platform.x, platform.y, platform.width, platform.height);
     context.fillStyle = platform.y === 480 ? "#dc4c9b" : "#f4cb62";
     context.fillRect(platform.x, platform.y, platform.width, 8);
   }
+
+  for (const [index, checkpoint] of level.checkpoints.entries()) {
+    if (index === 0) continue;
+    context.fillStyle =
+      index <= state.campaign.checkpointIndex ? "#f4cb62" : "#8c6698";
+    context.fillRect(checkpoint.x, level.groundY - 74, 6, 74);
+    context.fillRect(checkpoint.x + 6, level.groundY - 74, 36, 20);
+  }
+  context.fillStyle = "#62d9dc";
+  context.fillRect(level.exitX - 60, level.groundY - 90, 8, 90);
+  context.fillRect(level.exitX - 52, level.groundY - 90, 50, 32);
 
   for (const projectile of state.projectiles) {
     context.fillStyle = "#f4cb62";

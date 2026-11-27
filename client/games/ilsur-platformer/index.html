@@ -15,6 +15,13 @@
     <main class="prototype" aria-label="Третья игра с Ильсуром">
       <p class="rotate-notice" role="status">Поверните телефон горизонтально</p>
       <section class="scene" aria-label="Игровой мир">
+        <div class="game-hud" aria-label="Состояние игры">
+          <span id="level-name">Уровень 1</span>
+          <span>Время <strong id="level-time">01:30</strong></span>
+          <span>Жизни <strong id="lives">3</strong></span>
+          <span id="checkpoint-name">Старт</span>
+          <button id="pause" type="button" aria-label="Пауза">Ⅱ</button>
+        </div>
         <canvas
           id="scene"
           width="960"
@@ -23,6 +30,20 @@
         >
           Для игры нужен браузер с поддержкой Canvas.
         </canvas>
+      </section>
+      <section id="campaign-overlay" class="campaign-overlay" hidden>
+        <div
+          class="campaign-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="overlay-title"
+        >
+          <h1 id="overlay-title"></h1>
+          <p id="overlay-message"></p>
+          <button id="resume" type="button" hidden>Вернуться на подиум</button>
+          <button id="restart" type="button" hidden>Ещё попытка!</button>
+          <a id="catalog" href="/" hidden>В каталог</a>
+        </div>
       </section>
       <nav class="controls" aria-label="Управление игрой">
         <div class="control-cluster control-cluster--movement">

@@ -42,3 +42,14 @@ test("centers a scaled viewport and draws the crouched player facing left", () =
   expect(context.fillRect).toHaveBeenCalledWith(90, 420, 5, 5);
   expect(context.restore).toHaveBeenCalledTimes(2);
 });
+
+test("draws activated and pending checkpoints with a visible level exit", () => {
+  const context = makeContext();
+  const state = createGameState();
+  state.campaign.checkpointIndex = 1;
+  drawPlatformerScene(context, 960, 540, state);
+
+  expect(context.fillRect).toHaveBeenCalledWith(900, 406, 6, 74);
+  expect(context.fillRect).toHaveBeenCalledWith(1750, 406, 6, 74);
+  expect(context.fillRect).toHaveBeenCalledWith(2498, 390, 8, 90);
+});
