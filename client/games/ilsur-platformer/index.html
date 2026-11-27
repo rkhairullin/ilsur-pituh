@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
     <meta name="color-scheme" content="dark" />
     <title>Ильсур — платформер</title>
@@ -13,28 +13,69 @@
   </head>
   <body>
     <main class="prototype" aria-label="Третья игра с Ильсуром">
-      <header class="page-header">
-        <div>
-          <p class="eyebrow">ТРЕТЬЯ ИГРА · ПРОТОТИП</p>
-          <h1>Большое приключение Ильсура</h1>
-        </div>
-        <a href="/">В каталог</a>
-      </header>
       <p class="rotate-notice" role="status">Поверните телефон горизонтально</p>
       <section class="scene" aria-label="Игровой мир">
         <canvas
           id="scene"
-          width="1200"
+          width="960"
           height="540"
-          aria-label="Временная сцена платформера с Ильсуром"
+          aria-label="Игровой мир платформера с Ильсуром"
         >
           Для игры нужен браузер с поддержкой Canvas.
         </canvas>
       </section>
-      <p class="prototype-note">
-        Здесь пока простые фигуры. Управление и уровни появятся на следующих
-        этапах.
-      </p>
+      <nav class="controls" aria-label="Управление игрой">
+        <div class="control-cluster control-cluster--movement">
+          <button
+            type="button"
+            data-action="left"
+            aria-label="Влево"
+            aria-pressed="false"
+          >
+            ◀
+          </button>
+          <button
+            type="button"
+            data-action="right"
+            aria-label="Вправо"
+            aria-pressed="false"
+          >
+            ▶
+          </button>
+          <button
+            type="button"
+            data-action="crouch"
+            aria-label="Присесть"
+            aria-pressed="false"
+          >
+            ▼
+          </button>
+        </div>
+        <div class="control-cluster control-cluster--actions">
+          <button
+            type="button"
+            data-action="shoot"
+            aria-label="Стрелять"
+            aria-pressed="false"
+          >
+            ■
+          </button>
+          <button
+            type="button"
+            data-action="jump"
+            aria-label="Прыжок"
+            aria-pressed="false"
+          >
+            ✕
+          </button>
+        </div>
+      </nav>
+      <output
+        id="game-state"
+        class="visually-hidden"
+        aria-live="off"
+        aria-hidden="true"
+      ></output>
     </main>
   </body>
 </html>

@@ -56,7 +56,7 @@ function loginPage(
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="manifest" href="/icons/manifest.webmanifest">
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Ильсур - пИтух</title>
 <link rel="stylesheet" href="/login/login.css">
 </head>

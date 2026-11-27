@@ -1,48 +1,61 @@
-const worldWidth = 1200;
-const worldHeight = 540;
+import { PLATFORMS, VIEW_HEIGHT, VIEW_WIDTH, type GameState } from "./game.js";
 
-export function drawPlaceholderScene(
+export function drawPlatformerScene(
   context: CanvasRenderingContext2D,
   width: number,
   height: number,
+  state: GameState,
 ) {
-  const scale = Math.min(width / worldWidth, height / worldHeight);
-  const offsetX = (width - worldWidth * scale) / 2;
-  const offsetY = (height - worldHeight * scale) / 2;
+  const scale = Math.min(width / VIEW_WIDTH, height / VIEW_HEIGHT);
+  const offsetX = (width - VIEW_WIDTH * scale) / 2;
+  const offsetY = (height - VIEW_HEIGHT * scale) / 2;
 
   context.clearRect(0, 0, width, height);
   context.save();
   context.translate(offsetX, offsetY);
   context.scale(scale, scale);
-
   context.fillStyle = "#251137";
-  context.fillRect(0, 0, worldWidth, worldHeight);
+  context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+  context.save();
+  context.translate(-state.cameraX, 0);
 
   context.fillStyle = "#442052";
-  context.fillRect(55, 85, 245, 180);
-  context.fillRect(890, 70, 245, 200);
-  context.fillStyle = "#682a65";
-  context.fillRect(0, 390, worldWidth, 150);
+  for (const x of [120, 560, 980, 1460, 1880, 2320]) {
+    context.fillRect(x, 92, 190, 76);
+  }
 
-  context.fillStyle = "#dc4c9b";
-  context.fillRect(0, 390, worldWidth, 18);
-  context.fillStyle = "#62d9dc";
-  context.fillRect(300, 315, 190, 24);
-  context.fillRect(590, 245, 160, 24);
-  context.fillRect(900, 330, 150, 22);
-  context.fillStyle = "#f4cb62";
-  context.fillRect(95, 325, 132, 22);
+  for (const platform of PLATFORMS) {
+    context.fillStyle = platform.y === 480 ? "#682a65" : "#62d9dc";
+    context.fillRect(platform.x, platform.y, platform.width, platform.height);
+    context.fillStyle = platform.y === 480 ? "#dc4c9b" : "#f4cb62";
+    context.fillRect(platform.x, platform.y, platform.width, 8);
+  }
 
+  for (const projectile of state.projectiles) {
+    context.fillStyle = "#f4cb62";
+    context.fillRect(projectile.x - 7, projectile.y - 4, 14, 8);
+  }
+
+  const player = state.player;
+  const headHeight = player.crouched ? 24 : 32;
+  const bodyTop = player.y + headHeight;
   context.fillStyle = "#f4cb62";
-  context.fillRect(125, 298, 54, 76);
+  context.fillRect(
+    player.x + 3,
+    bodyTop,
+    player.width - 6,
+    player.height - headHeight,
+  );
   context.fillStyle = "#f3ecf6";
-  context.fillRect(132, 270, 40, 36);
+  context.fillRect(player.x + 5, player.y, player.width - 10, headHeight);
   context.fillStyle = "#dc4c9b";
-  context.fillRect(136, 260, 9, 12);
-  context.fillRect(148, 253, 9, 19);
-  context.fillRect(160, 260, 9, 12);
+  context.fillRect(player.x + 8, player.y - 8, 6, 10);
+  context.fillRect(player.x + 18, player.y - 12, 6, 14);
+  context.fillRect(player.x + 28, player.y - 8, 6, 10);
   context.fillStyle = "#251137";
-  context.fillRect(158, 282, 5, 5);
+  const eyeX = player.facing === 1 ? player.x + 28 : player.x + 10;
+  context.fillRect(eyeX, player.y + 12, 5, 5);
 
+  context.restore();
   context.restore();
 }
