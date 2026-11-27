@@ -555,7 +555,7 @@ test("opens the third game by private direct link after shared login", async () 
   expect(game.statusCode).toBe(200);
   expect(game.headers["cache-control"]).toBe("no-store");
   expect(game.body).toContain("<canvas");
-  expect(game.body).toContain("Временная сцена платформера с Ильсуром");
+  expect(game.body).toContain("Игровой мир платформера с Ильсуром");
 
   const catalog = await app.inject({
     url: "/",
