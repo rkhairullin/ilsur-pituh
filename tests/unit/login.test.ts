@@ -524,3 +524,48 @@ test("opens Packman and its instructions after shared login", async () => {
   });
   expect(directLogin.headers.location).toBe("/packman/");
 });
+
+test("opens the third game by private direct link after shared login", async () => {
+  const app = makeApp();
+  const path = "/ilsur-platformer/";
+  const guest = await app.inject(path);
+  expect(guest.statusCode).toBe(302);
+  expect(guest.headers.location).toBe(
+    `/login?returnTo=${encodeURIComponent(path)}`,
+  );
+  expect(guest.headers["cache-control"]).toBe("no-store");
+
+  const login = await app.inject({
+    method: "POST",
+    url: "/login",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    payload: new URLSearchParams({
+      nickname: "Игрок платформера",
+      password: options.password,
+      returnTo: path,
+    }).toString(),
+  });
+  expect(login.statusCode).toBe(303);
+  expect(login.headers.location).toBe(path);
+  const cookie = login.cookies[0]!;
+  const game = await app.inject({
+    url: path,
+    headers: { cookie: `${cookie.name}=${cookie.value}` },
+  });
+  expect(game.statusCode).toBe(200);
+  expect(game.headers["cache-control"]).toBe("no-store");
+  expect(game.body).toContain("<canvas");
+  expect(game.body).toContain("Временная сцена платформера с Ильсуром");
+
+  const catalog = await app.inject({
+    url: "/",
+    headers: { cookie: `${cookie.name}=${cookie.value}` },
+  });
+  expect(catalog.statusCode).toBe(200);
+  expect(catalog.body).not.toContain("ilsur-platformer");
+  expect(catalog.body).not.toContain("Большое приключение Ильсура");
+
+  expect(
+    (await app.inject("/games/ilsur-platformer/index.html")).statusCode,
+  ).toBe(404);
+});

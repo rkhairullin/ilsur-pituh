@@ -21,6 +21,8 @@
 
 - `client/games/ilsur-lovit-chleny/` содержит HTML, стили, TypeScript и ассеты
   первой игры. Маршрут игры — `/ilsur-lovit-chleny/`.
+- `client/games/ilsur-platformer/` содержит основу третьей игры с Canvas 2D.
+  Закрытый прямой маршрут — `/ilsur-platformer/`; в каталог игра пока не входит.
 - `client/public/catalog/` содержит стили и превью каталога на `/`.
 - `client/public/login/` содержит стили и портрет для общего входа на `/login`.
   Игра использует тот же портрет.

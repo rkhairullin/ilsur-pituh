@@ -30,12 +30,14 @@ const instructionsPath = `${gamePath}instructions`;
 
 const packmanPath = "/packman/";
 const packmanInstructionsPath = `${packmanPath}instructions`;
+const platformerPath = "/ilsur-platformer/";
 
 function safeReturnTo(value: unknown) {
   return value === gamePath ||
     value === instructionsPath ||
     value === packmanPath ||
-    value === packmanInstructionsPath
+    value === packmanInstructionsPath ||
+    value === platformerPath
     ? value
     : "/";
 }
@@ -154,6 +156,7 @@ export function registerLogin(app: FastifyInstance, options: LoginOptions) {
       path === instructionsPath ||
       path === packmanPath ||
       path === packmanInstructionsPath ||
+      path === platformerPath ||
       api
     ) {
       reply.header("Cache-Control", "no-store");
@@ -212,6 +215,18 @@ export function registerLogin(app: FastifyInstance, options: LoginOptions) {
     }
     const template = await readFile(
       new URL("../client/games/packman/index.html", import.meta.url),
+      "utf8",
+    );
+    return reply.type("text/html; charset=utf-8").send(template);
+  });
+  app.get(platformerPath, async (request, reply) => {
+    if (!findSession.get(sessionHash(request), Date.now())) {
+      return reply.redirect(
+        `/login?returnTo=${encodeURIComponent(platformerPath)}`,
+      );
+    }
+    const template = await readFile(
+      new URL("../client/games/ilsur-platformer/index.html", import.meta.url),
       "utf8",
     );
     return reply.type("text/html; charset=utf-8").send(template);
